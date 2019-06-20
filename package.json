@@ -1,0 +1,26 @@
+{
+  "name": "typescript-easymock",
+  "version": "0.0.1",
+  "description": "Delightful class mocks for JavaScript and TypeScript.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "repository": "https://github.com/hmil/typescript-easymock.git",
+  "author": "Hadrien Milano <hmil.fr>",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc -p .",
+    "test": "tslint -p ."
+  },
+  "files": [
+    "dist"
+  ],
+  "devDependencies": {
+    "tslib": "^1.10.0",
+    "tslint": "^5.17.0",
+    "typescript": "^3.5.2",
+    "typestrict": "^1.0.2"
+  },
+  "dependencies": {
+    "tslint-override": "^0.5.1"
+  }
+}

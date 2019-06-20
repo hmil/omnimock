@@ -1,0 +1,11 @@
+{
+    "extends": [
+        "typestrict",
+        "tslint-override"
+    ],
+    "rules": {
+        "no-use-before-declare": false,
+        "no-unused-variable": false,
+        "explicit-override": [ true, "new-line-after-decorators-and-tags" ]
+    }
+}
