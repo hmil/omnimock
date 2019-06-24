@@ -6,17 +6,12 @@ export class MocksProxyHandler implements ProxyHandler<object> {
     constructor(
             private context: IMocksContext,
             private originalConstructor: Function,
-            private inst: any,
             private filter: ObjectMethodsFilter) {
     }
 
     /** @override */
     getPrototypeOf() {
-        if (this.inst.constructor != null) {
-            return this.inst.constructor.prototype;
-        } else {
-            return null;
-        }
+        return this.originalConstructor.prototype;
     }
 
     /** @override */

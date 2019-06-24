@@ -49,7 +49,7 @@ class ExpectedInvocationAndResults<T> {
     }
 
     toString() {
-        return `${this.expectedInvocation.toString()} ${this.result.getCurrentActualCount()}/${this.result.expectedCount} matches`;
+        return `${this.expectedInvocation.toString()} matched ${this.result.getCurrentActualCount()} times of ${this.result.expectedCount} expected`;
     }
 
     private argsMatches(actual: unknown[]): boolean {

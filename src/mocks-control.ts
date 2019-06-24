@@ -1,6 +1,6 @@
 import { IMocksControlState, RecordState, ReplayState } from './mocks-control-state';
 import { MocksProxyHandler } from './mocks-proxy-handler';
-import { ObjectMethodsFilter } from './object-methods-filter';
+import { ObjectMethodsFilter, InterfaceMethodsFilter } from './object-methods-filter';
 import { IExpectationSetters } from './expectation-setter';
 import { Invocation } from './recorded-call';
 import { MocksBehavior } from './mocks-behavior';
@@ -13,10 +13,12 @@ interface ConstructorType<T> {
 type InstOrSelf<T> = T extends ConstructorType<infer Inst> ? Inst : T;
 
 export interface IMocksControl {
-    mock: <T extends object>(itf: T) => InstOrSelf<T>;
-    replay: () => void;
-    reset: () => void;
-    verify: () => void;
+    mock<T>(name?: string): T;
+    mock<T extends object>(constructor: ConstructorType<T>): T;
+    mock<T extends object>(itf: T): InstOrSelf<T>;
+    replay(): void;
+    reset(): void;
+    verify(): void;
 }
 
 export interface IMocksContext {
@@ -30,11 +32,21 @@ export class MocksControl implements IMocksControl, IMocksContext, IExpectationS
     private state: IMocksControlState = new RecordState(this, this.behavior);
 
     /** @override */
-    mock<T extends object>(itf: T): InstOrSelf<T> {
-        const inst: InstOrSelf<T> =  (isConstructorType<any>(itf) ? createMockClass(itf) as unknown : itf) as InstOrSelf<T>;
-        const ctr = isConstructorType<any>(itf) ? itf : itf.constructor;
-        const p = new Proxy<typeof inst>(inst, new MocksProxyHandler(this, ctr, inst, new ObjectMethodsFilter()));
-        return p;
+    
+    mock<T extends object>(constructorOrName?: ConstructorType<T> | string): T {
+        if (constructorOrName == undefined) {
+            constructorOrName = 'stub';
+        }
+        if (typeof constructorOrName === 'function') {
+            return new Proxy<T>(createMockClass(constructorOrName), new MocksProxyHandler(this, constructorOrName, new ObjectMethodsFilter()));
+        }
+        if (typeof constructorOrName === 'string') {
+            const dummyCtx = {
+                [constructorOrName]: function() {}
+            };
+            return new Proxy<T>({} as T, new MocksProxyHandler(this, dummyCtx[constructorOrName], new InterfaceMethodsFilter()));
+        }
+        throw new Error('Invalid arguments passed to `mock` funciton. Please refer to the docs.');
     }
 
     /** @override */
@@ -107,10 +119,6 @@ export class MocksControl implements IMocksControl, IMocksContext, IExpectationS
         return this;
     }
 
-}
-
-function isConstructorType<T>(t: unknown): t is ConstructorType<T> {
-    return typeof t === 'function';
 }
 
 function createMockClass<T extends ConstructorType<any>>(klass: T): InstanceType<T> {

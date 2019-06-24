@@ -41,6 +41,7 @@ export class RecordState implements IMocksControlState {
 
     /** @override */
     invoke(target: unknown, prop: PropertyKey, args: unknown[]): unknown {
+        // TODO: This method should not be called twice on the same stack because that means we register a call made by the framework.
         return recordedInvocation(this.context, target, prop, args);
     }
 
