@@ -1,3 +1,5 @@
+import { isMatcher } from './IMatcher';
+
 export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string {
     const result = [strings[0]];
     let i = 1;
@@ -8,6 +10,9 @@ export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string
 }
 
 function formatObjectForHumans(obj: unknown): string {
+    if (isMatcher(obj)) {
+        return `<${obj.__EASYMOCK_MATCHER.name}>`;
+    }
     if (typeof obj === 'object' && obj != null) {
         const ctrName = obj.constructor.name;
         if (ctrName && ctrName !== 'Object') {

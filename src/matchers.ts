@@ -1,20 +1,15 @@
 import { fmt } from './utils';
+import { IMatcher, isMatcher } from './IMatcher';
 
-interface IMatcher {
-    __EASYMOCK_MATCHER: {
-        /** Returns true if actual matches this matcher, or an error message otherwise */
-        match(actual: unknown): true | string;
-    };
+
+function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): IMatcher & T {
+    return matcher((actual) => predicate(actual) || `expected ${type} but got ${typeof actual}`, `any ${type}`) as IMatcher & T;
 }
 
-function matcher(match: (candidate: unknown) => true | string): IMatcher {
+function matcher(match: (candidate: unknown) => true | string, name: string): IMatcher {
     return {
-        __EASYMOCK_MATCHER: { match }
+        __EASYMOCK_MATCHER: { match, name },
     };
-}
-
-function isMatcher(t: unknown): t is IMatcher {
-    return typeof t === 'object' && t != null && '__EASYMOCK_MATCHER' in t;
 }
 
 interface Indexable {
@@ -23,7 +18,7 @@ interface Indexable {
 
 export function same<T>(expected: T): T & IMatcher {
     return Object.assign({}, expected, matcher((actual) => actual === expected ||
-            fmt`expected ${actual} to be the same instance as ${expected}`));
+            fmt`expected ${actual} to be the same instance as ${expected}`, fmt`same(${expected})`));
 }
 
 export function arrayEq<T extends any[]>(expected: T): T & IMatcher {
@@ -44,7 +39,7 @@ export function arrayEq<T extends any[]>(expected: T): T & IMatcher {
         }
 
         return true;
-    }));
+    }, fmt`arrayEq(${expected})`));
 }
 
 export function objectEq<T extends object>(expectedUnsafe: T): T & IMatcher {
@@ -83,7 +78,40 @@ export function objectEq<T extends object>(expectedUnsafe: T): T & IMatcher {
         }
 
         return true;
-    }));
+    }, fmt`objectEq(${expected})`));
+}
+
+export function anything(): IMatcher & any {
+    return matcher(() => true, 'anything');
+}
+
+export function anyNumber(): number & IMatcher {
+    return typeMatcher((a): a is number => typeof a === 'number', 'number');
+}
+
+export function anyBoolean(): boolean & IMatcher {
+    return typeMatcher((a): a is boolean => typeof a === 'boolean', 'boolean');
+}
+
+export function anyString(): string & IMatcher {
+    return typeMatcher((a): a is string => typeof a === 'string', 'string');
+}
+
+type AnyFunction = (...args: any[]) => any;
+export function anyFunction(): AnyFunction & IMatcher {
+    return typeMatcher((a): a is AnyFunction => typeof a === 'function', 'function');
+}
+
+export function anyObject(): any & IMatcher {
+    return typeMatcher((a): a is object => typeof a === 'object', 'object');
+}
+
+export function anySymbol(): symbol & IMatcher {
+    return typeMatcher((a): a is symbol => typeof a === 'symbol', 'symbol');
+}
+
+export function anyArray(): any[] & IMatcher {
+    return typeMatcher((a): a is any[] => Array.isArray(a), 'array');
 }
 
 export function jsonEq<T>(expected: T): T & IMatcher {
@@ -92,7 +120,7 @@ export function jsonEq<T>(expected: T): T & IMatcher {
         const serializedActual = JSON.stringify(actual);
 
         return serializedActual === serializedExpected || `expected ${serializedExpected} but got ${serializedActual}`;
-    }));
+    }, fmt`jsonEq(${expected})`));
 }
 
 export function match(expected: unknown, actual: unknown): true | string {

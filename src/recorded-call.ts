@@ -9,7 +9,7 @@ export class Invocation {
     ) {}
 
     toString() {
-        return fmt`${this.instance}.${this.method.toString()}(${this.args.map(a => JSON.stringify(a)).join(',')})`;
+        return fmt`${this.instance}.${this.method.toString()}(${this.args.map(a => fmt`${a}`).join(',')})`;
     }
 }
 
