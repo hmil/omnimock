@@ -25,6 +25,7 @@ A test with easymock is broken down in three phases:
 This is what it looks like in code:
 
 ```ts
+import { createControl, expect as expectCall } from 'typescript-easymock';
 // The control is a context you use to create mocks and control the current phase
 const control = createControl();
 
@@ -55,6 +56,8 @@ You will generally create the control and the mocks during the setup of your tes
 
 For instance, in Jasmine:
 ```ts
+import { IMocksControl, createControl } from 'typescript-easymock';
+
 describe('UserProfileInformation', () => {
     let control: IMocksControl
     let testClass: UserProfileInformation
@@ -80,6 +83,8 @@ describe('UserProfileInformation', () => {
 typescript-easymock provides a collection of matchers to use when you cannot or don't want to specifiy exactly the parameters which will be passed to a mocked method.
 
 ```ts
+import { anyNumber, expect as expectCall } from 'typescript-easymock';
+
 expectCall(dataServiceMock.fetchUserProfile({ id: anyNumber() }))
 
 control.replay()
@@ -92,6 +97,7 @@ _Yes, of course in reality you would mock the randomness source used by `getRand
 Here's another example if you would want to check that the parameter is equal by reference to the expected parameter:
 
 ```ts
+import { same, expect as expectCall } from 'typescript-easymock';
 const veryHeavyObject = createSomeVeryComplexObject()
 expectCall(queryEngineMock.transform(same(veryHeavyObject)))
 
