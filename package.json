@@ -1,12 +1,12 @@
 {
   "name": "typescript-easymock",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Delightful class mocks for JavaScript and TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "repository": "https://github.com/hmil/typescript-easymock.git",
   "author": "Hadrien Milano <hmil.fr>",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "scripts": {
     "build": "tsc -p .",
     "test": "tslint -p ."
