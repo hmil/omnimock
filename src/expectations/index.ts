@@ -1,29 +1,30 @@
 import { isRecordedGetter, isRecordedCall, RecordedGetter, RecordedCall } from '../recording';
+import { FnType } from '../base-types';
 
-export interface CallExpectation<Args extends unknown[], Ret> { };
-export interface GetterExpectation<T> { };
+export interface CallExpectation<Inst, Args extends unknown[], Ret> { };
+export interface GetterExpectation<Inst, T> { };
 
 interface CallExpectationFactory<T> {
-    (recording: RecordedCall<unknown[], unknown>): T;
+    (recording: RecordedCall<unknown, FnType<unknown[], unknown>, unknown[], unknown>): T;
 }
 
 interface GetterExpectationFactory<T> {
-    (recording: RecordedGetter<unknown>): T;
+    (recording: RecordedGetter<object, never, unknown>): T;
 }
 
 const callExpectationFactories: CallExpectationFactory<any>[] = [];
 const getterExpectationFactories: GetterExpectationFactory<any>[] = [];
 
-function createGetterExpectation(recording: RecordedGetter<unknown>): GetterExpectation<unknown> {
+function createGetterExpectation(recording: RecordedGetter<object, never, unknown>): GetterExpectation<unknown, unknown> {
     return getterExpectationFactories
             .map(f => f(recording))
-            .reduce((prev, curr) => ({ ...prev, ...curr }), {} as GetterExpectation<any>);
+            .reduce((prev, curr) => ({ ...prev, ...curr }), {} as GetterExpectation<any, any>);
 }
 
-function createCallExpectation(recording: RecordedCall<unknown[], unknown>): CallExpectation<unknown[], unknown> {
+function createCallExpectation(recording: RecordedCall<unknown, FnType<unknown[], unknown>, unknown[], unknown>): CallExpectation<unknown, unknown[], unknown> {
     return callExpectationFactories
             .map(f => f(recording))
-            .reduce((prev, curr) => ({ ...prev, ...curr }), {} as CallExpectation<any, any>);
+            .reduce((prev, curr) => ({ ...prev, ...curr }), {} as CallExpectation<any, any, any>);
 }
 
 export function registerCallExpectationFactory<T>(factory: CallExpectationFactory<T>): void {
@@ -34,9 +35,9 @@ export function registerGetterExpectationFactory<T>(factory: GetterExpectationFa
     getterExpectationFactories.push(factory);
 }
 
-export type AnyExpectation = CallExpectation<unknown[], unknown> | GetterExpectation<unknown>;
+export type AnyExpectation = CallExpectation<unknown, unknown[], unknown> | GetterExpectation<unknown, unknown>;
 
-export function createExpectation<T>(recording: T): GetterExpectation<unknown> | CallExpectation<unknown[], unknown> {
+export function createExpectation<T>(recording: T): GetterExpectation<unknown, unknown> | CallExpectation<unknown, unknown[], unknown> {
     if (isRecordedGetter(recording)) {
         return createGetterExpectation(recording);
     }

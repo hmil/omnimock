@@ -1,23 +1,25 @@
 import { registerCallExpectationFactory, registerGetterExpectationFactory } from '../expectations';
+import { TsMockError } from 'error';
 
-export interface BaseCallExpectation<Args extends unknown[], Ret> {
+export interface BaseCallExpectation<Inst, Args extends unknown[], Ret> {
     return(value: Ret): void;
     throw(e: any): void;
     call(cb: (...args: Args) => Ret): void;
+    callThrough: Inst extends undefined ? TsMockError<'`callThrough` is not available on virtual mocks'> : () => void;
 }
 
-
-export interface BaseGetterExpectation<T> {
+export interface BaseGetterExpectation<Inst, T> {
     useValue(v: T): void;
-    callFake(cb: () => T): void;
+    useGetter(cb: () => T): void;
+    useActual: Inst extends undefined ? TsMockError<'`useActual` is not available on virtual mocks'> : () => void;
 };
 
 declare module "." {
-    interface CallExpectation<Args, Ret> extends BaseCallExpectation<Args, Ret> { }
-    interface GetterExpectation<T> extends BaseGetterExpectation<T> { }
+    interface CallExpectation<Inst, Args, Ret> extends BaseCallExpectation<Inst, Args, Ret> { }
+    interface GetterExpectation<Inst, T> extends BaseGetterExpectation<Inst, T> { }
 }
 
-registerCallExpectationFactory<BaseCallExpectation<unknown[], unknown>>((recording) => ({
+registerCallExpectationFactory<BaseCallExpectation<unknown, unknown[], unknown>>((recording) => ({
     call(cb) {
         recording.answer((args) => cb(...args));
     },
@@ -26,14 +28,20 @@ registerCallExpectationFactory<BaseCallExpectation<unknown[], unknown>>((recordi
     },
     throw(e) {
         recording.answer(() => { throw e });
+    },
+    callThrough() {
+        recording.answer((args) => recording.fnProvider().apply(recording.ctx, args));
     }
 }));
 
-registerGetterExpectationFactory<BaseGetterExpectation<unknown>>((recording) => ({
-    callFake(cb) {
+registerGetterExpectationFactory<BaseGetterExpectation<unknown, unknown>>((recording) => ({
+    useGetter(cb) {
         recording.answer(cb);
     },
     useValue(value) {
         recording.answer(() => value);
+    },
+    useActual() {
+        recording.answer(() => recording.inst[recording.key]);
     }
 }));

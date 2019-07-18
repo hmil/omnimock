@@ -11,7 +11,7 @@ interface PromiseCallExpectation<T> {
 }
 
 declare module "." {
-    interface CallExpectation<Args extends unknown[], Ret> extends PromiseCallExpectation<Ret> { }
+    interface CallExpectation<Inst, Args extends unknown[], Ret> extends PromiseCallExpectation<Ret> { }
 }
 
 registerCallExpectationFactory<PromiseCallExpectation<Promise<unknown>>>((recording) => ({

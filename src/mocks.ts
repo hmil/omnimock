@@ -1,21 +1,23 @@
 import { recordedCall, recordedGetter, RecordedCall, RecordedGetter } from "./recording";
-import { FnType, ConstructorType, graft } from './base-types';
+import { FnType, ConstructorType, graft, AnyFunction } from './base-types';
 import { WithMetadata, METADATA_KEY, createMetadata, TsMockMetadata } from './metadata';
 
 
-interface MockMethod<Args extends any[], Ret> {
-    (...args: Args): RecordedCall<Args, Ret>;
+interface MockMethod<Ctx, Fn extends AnyFunction, Args extends any[], Ret> {
+    (...args: Args): RecordedCall<Ctx, Fn, Args, Ret>;
 }
 
-type MockMember<T> = T extends FnType<infer Args, infer Ret> ? MockMethod<Args, Ret> : T;
+type MockMember<T, Ctx> = T extends FnType<infer Args, infer Ret> ? MockMethod<Ctx, T, Args, Ret> : undefined;
 
-type MockObject<T> = {
-    [K in keyof T]: RecordedGetter<T[K]> & MockMember<T[K]>;
-}
+type MockObject<T, Inst> = Inst extends undefined ? 
+    { [K in keyof T]: RecordedGetter<Inst, never, T[K]> & MockMember<T[K], Inst> } :
+    { [K in keyof Inst]: RecordedGetter<Inst, K, Inst[K]> & MockMember<Inst[K], Inst> };
 
 const MOCK_METADATA_KEY = 'mock';
 
-export type Mock<T> = MockObject<T> & WithMetadata<typeof MOCK_METADATA_KEY, T>;
+export type MockMetadata<T> = WithMetadata<typeof MOCK_METADATA_KEY, T>;
+export type InstanceBackedMock<T> = MockObject<T, T> & MockMetadata<T>;
+export type Mock<T> = MockObject<T, undefined> & MockMetadata<T>;
 
 export function instantiate<T extends ConstructorType>(klass: T, params: ConstructorParameters<T>): InstanceType<T> {
     class Ctr extends klass {
@@ -53,15 +55,16 @@ function instanceProxyHandlerFactory(
     };
 }
 
+
 function mockProxyHandlerFactory<T extends object>(
         baseObject: T,
         originalConstructor: Function): ProxyHandler<Mock<T>> {
     const expectations = new Map<string, () => any>();
     const instance = new Proxy<T>(baseObject, instanceProxyHandlerFactory(originalConstructor, expectations));
     const metadata = createMetadata<typeof MOCK_METADATA_KEY, T>(MOCK_METADATA_KEY, instance);
-
+        
     return {
-        get(target: object, prop: PropertyKey, receiver: unknown): TsMockMetadata<typeof MOCK_METADATA_KEY, T> | RecordedGetter<any> {
+        get(target: Mock<T>, prop: PropertyKey, receiver: unknown): TsMockMetadata<typeof MOCK_METADATA_KEY, T> | RecordedGetter<any, any, any> {
             if (typeof prop !== 'string') {
                 return Reflect.get(target, prop, receiver);
             }
@@ -70,17 +73,21 @@ function mockProxyHandlerFactory<T extends object>(
             }
             
             const propertyStr = prop;
+            const MOCK_EXPECTATION_SETTER_NAME = `${target}.${propertyStr}; If you are seeing this then most likely you passed someMock directly instead of instance(someMock)`;
             
-            const record = recordedGetter((cb) => {
-                expectations.set(propertyStr, cb);
-            });
-            function stubFunction(): RecordedCall<any, any> {
-                return recordedCall((cb) => {
-                    expectations.set(propertyStr, () => (...args: any[]) => cb(args));
+            const record = recordedGetter(baseObject, propertyStr as keyof T,
+                (cb) => {
+                    expectations.set(propertyStr, cb);
                 });
+            const dummyContext = {
+                [MOCK_EXPECTATION_SETTER_NAME](): RecordedCall<T, AnyFunction, any, any> {
+                    return recordedCall(baseObject, () => Reflect.get(baseObject, prop, receiver), (cb) => {
+                        expectations.set(propertyStr, () => (...args: any[]) => cb(args));
+                    });
+                }
             }
 
-            const ret = graft(stubFunction, record);
+            const ret = graft(dummyContext[MOCK_EXPECTATION_SETTER_NAME], record);
             return ret;
         }
     };

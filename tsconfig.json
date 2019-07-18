@@ -3,6 +3,7 @@
         "outDir": "dist",
         "baseUrl": "src",
         "declaration": true,
+        "declarationMap": true,
         "noImplicitAny": true,
         "strict": true,
         "module": "commonjs",
