@@ -16,7 +16,8 @@
         "sourceMap": false,
         "lib": [
             "es2015",
-            "esnext.asynciterable"
+            "esnext.asynciterable",
+            "dom"
         ]
     },
     "include": [
