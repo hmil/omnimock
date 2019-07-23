@@ -7,3 +7,7 @@ export interface TsMockError<T extends string> {
         [k in T]: null;
     }
 }
+
+export function suppressCompileTimeError<T>(t: T): T & TsMockError<any> {
+    return t as any;
+}

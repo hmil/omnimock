@@ -4,36 +4,30 @@
 
 export const METADATA_KEY = '__TSMOCK__';
 
-export type WithMetadata<Type, T> = {
-    [METADATA_KEY]: TsMockMetadata<Type, T>;
-}
-
-export interface TsMockMetadata<Type, T> {
-    type: Type;
-    data: T;
-}
-
-
-export function getMetadata<DATA>(t: WithMetadata<unknown, DATA>): DATA {
-    return t[METADATA_KEY].data;
-}
-
-export function setMetadata<Type, DATA>(target: WithMetadata<Type, DATA>, metadata: TsMockMetadata<Type, DATA>): void {
-    target[METADATA_KEY] = metadata;
-}
-
-export function createMetadata<Type, DATA>(type: Type, data: DATA): TsMockMetadata<Type, DATA> {
-    return { data, type };
-}
-
-export function withMetadata<T, Type, DATA>(target: T, metadata: TsMockMetadata<Type, DATA>): T & WithMetadata<Type, DATA> {
-    return {
-        ...target,
-        [METADATA_KEY]: metadata
+export type WithMetadata<Key extends string, T> = {
+    [METADATA_KEY]: {
+        [K in Key]: T;
     };
 }
 
-export function hasMetadata<Type extends string>(target: unknown, type: Type): target is WithMetadata<Type, unknown> {
-    return typeof target === 'object' && target != null && METADATA_KEY in target &&
-            (target as WithMetadata<unknown, unknown>)[METADATA_KEY].type === type;
+export type WithoutMetadata<Key extends string, T extends WithMetadata<Key, unknown>> = Omit<T, typeof METADATA_KEY>;
+export type GetMetadata<Key extends string, T extends WithMetadata<Key, any>> = T extends WithMetadata<Key, infer DATA> ? DATA : never;
+export function getMetadata<Key extends string, DATA>(t: WithMetadata<Key, DATA>, key: Key): DATA {
+    const metadata = t[METADATA_KEY];
+    if (metadata == null) {
+        throw new Error('No metadata found');
+    }
+    return metadata[key];
+}
+
+export function setMetadata<Key extends string, DATA, T extends WithMetadata<Key, DATA>>(target: T, key: Key, metadata: DATA): T {
+    if (!(METADATA_KEY in target) || (target as WithMetadata<Key, unknown>)[METADATA_KEY] == null) {
+        target[METADATA_KEY] = {} as any;
+    }
+    target[METADATA_KEY][key] = metadata;
+    return target;
+}
+
+export function hasMetadata<Key extends string, DATA>(t: object, key: Key): t is WithMetadata<Key, DATA> {
+    return (METADATA_KEY in t) && (t as WithMetadata<Key, unknown>)[METADATA_KEY] != null && (t as WithMetadata<Key, unknown>)[METADATA_KEY][key] != null;
 }

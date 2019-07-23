@@ -6,7 +6,29 @@ export class Container {
     }
 }
 
+export interface Tag {
+    chip: {
+        id: number
+    };
+    manufacturer: {
+        fetch(): Promise<string>;
+    }
+}
+
 export class CatClass extends Container {
+
+    public tag: Tag = {
+        chip: {
+            id: 123
+        },
+        manufacturer: {
+            fetch: () => Promise.resolve('nokia')
+        }
+    };
+
+    public getTag(): Tag {
+        return this.tag;
+    }
     
     constructor(
             public readonly name: string) {

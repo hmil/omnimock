@@ -1,4 +1,10 @@
+// Expose the standard API
 export * from './static-api';
 
-import './expectations/base';
-import './expectations/promise';
+// Expose the plugin author API
+export * from './plugin-api';
+
+// Load the stock plugins
+import './plugins/base';
+import './plugins/promise';
+import './plugins/quantifiers';

@@ -1,13 +1,13 @@
 /*
  * Top-level API
  */
-
-import { getMetadata } from './metadata';
-import { TsMockError } from './error';
-import { RecordedCall, RecordedGetter } from './recording';
-import { CallExpectation, GetterExpectation, createExpectation, AnyExpectation } from './expectations';
 import { ConstructorType, NotAConstructorType } from './base-types';
-import { Mock, mockClass, mockInterface, mockObject, InstanceBackedMock, MockMetadata } from './mocks';
+import { TsMockError } from './error';
+import { InstanceBackedMock, Mock, mockClass, mockInterface, mockObject, getMockInstance } from './mocks';
+import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
+import { ExpectationSetter, createExpectationSetter } from './expectations';
+import { hasMetadata, GetMetadata } from './metadata';
+
 
 /**
  * Creates a mock for a class, an interface or an object instance.
@@ -32,9 +32,9 @@ import { Mock, mockClass, mockInterface, mockObject, InstanceBackedMock, MockMet
  * ```
  */
 export function mock<T>(name?: string): Mock<T>;
-export function mock<T extends ConstructorType>(constructor: T, ...args: ConstructorParameters<T>): InstanceBackedMock<InstanceType<T>>;
-export function mock<T>(inst: NotAConstructorType<T, TsMockError<'Missing the following constructor parameters:'> & (T extends ConstructorType ? ConstructorParameters<T> : never)>): InstanceBackedMock<T>;
-export function mock<T extends object>(toMock: string | ConstructorType | T | undefined, ...args: unknown[]): Mock<T> {
+export function mock<T extends ConstructorType<any>>(constructor: T, ...args: ConstructorParameters<T>): InstanceBackedMock<InstanceType<T>>;
+export function mock<T>(inst: NotAConstructorType<T, TsMockError<'You need to pass additional parameters after the constructor like this: `mock(Ctr, ...args)`. Missing parameters:' & (T extends ConstructorType<any> ? ConstructorParameters<T> : never)>>): InstanceBackedMock<T>;
+export function mock<T extends object>(toMock: string | ConstructorType<any> | T | undefined, ...args: unknown[]): Mock<T> {
     if (toMock == undefined) {
         toMock = 'stub';
     }
@@ -65,16 +65,18 @@ export function mock<T extends object>(toMock: string | ConstructorType | T | un
  * when(mockedFoo.getMessage).useValue(() => 'someMessage')
  * ```
  */
-export function when<T extends RecordedGetter<any, any, any>>(t: T): T extends RecordedGetter<infer Inst, any, infer U> ? GetterExpectation<Inst, U> : never;
-export function when<T extends RecordedCall<any, any, any[], any>>(t: T): T extends RecordedCall<infer Inst, any, infer Args, infer Ret> ? CallExpectation<Inst, Args, Ret> : never;
-export function when(t: unknown): TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
-export function when(t: any): AnyExpectation | TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
-    return createExpectation(t);
+export function when<T extends Recording<any>>(t: T): ExpectationSetter<T>;
+export function when(t: object): TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
+export function when<T extends Recording<any>>(t: object): ExpectationSetter<T> | TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
+    if (!hasMetadata<RECORDING_METADATA_KEY, GetMetadata<RECORDING_METADATA_KEY, UnknownRecording>>(t, 'recording')) {
+        throw new Error('`when` needs to be invoked on a mock. Did you forget to `mock()` your object?');
+    }
+    return createExpectationSetter(t);
 }
 
 /**
  * Returns the proxy instance controlled by this mock.
  */
-export function instance<T>(t: MockMetadata<T>): T {
-    return getMetadata(t);
+export function instance<T>(t: Mock<T>): T {
+    return getMockInstance(t);
 }

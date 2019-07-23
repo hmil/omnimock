@@ -1,7 +1,7 @@
-export type ConstructorType = new (...args: any[]) => any;
-export type AnyFunction = (...args: any[]) => any;
-export type NotAConstructorType<T, Default> = T extends ConstructorType ? Default : T;
+export type ConstructorType<T> = new (...args: any[]) => T;
+export type NotAConstructorType<T, Default> = T extends ConstructorType<any> ? Default : T;
 export type FnType<Args extends any[], Ret> = (...args: Args) => Ret;
+export type AnyFunction = FnType<any[], any>;
 
 /**
  * Adds all properties of twig onto stem and returns stem.
