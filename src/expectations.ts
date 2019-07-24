@@ -1,35 +1,161 @@
-import { UnknownRecording, RecordedArguments, RecordedType, AnyRecording, RECORDING_METADATA_KEY } from './recording';
-import { GetMetadata, getMetadata } from './metadata';
+import { Range, ZERO_OR_MORE } from './range';
+import { match, fmt } from './matchers';
 
-export class ExpectationSetterApi<T extends AnyRecording> {
+interface RuntimeContext<Args, Ret> {
+    getOriginalContext: () => object | undefined;
+    getOriginalTarget: () => Ret;
+    context: unknown;
+    args: Args;
+}
+
+export interface ExpectationHandler<Args, Ret> {
+    (context: RuntimeContext<Args, Ret>): Ret;
+}
+
+interface MatchedExpectation<T> {
+    result: T;
+}
+
+interface UnmatchedExpectation {
+    error: string;
+}
+
+
+class MockExpectation<Args extends unknown[], Ret> {
+
+    private actualCalls: number = 0;
 
     constructor(
-            public readonly recording: GetMetadata<RECORDING_METADATA_KEY, T>,
-            public readonly chain: () => ExpectationSetter<T>) {
+            private args: Args,
+            private isGetter: boolean,
+            public expectedCalls: Range,
+            private readonly handler: ExpectationHandler<Args, Ret>) { }
+
+    matches(context: RuntimeContext<Args, Ret>): boolean {
+        return match(this.args, context.args) === true;
     }
 
-    answer(cb: (getOriginalContext: () => object | undefined, getOriginal: () => T, ctx: unknown, args: RecordedArguments<T>) => RecordedType<T>): void {
-        this.recording.expect();
-        this.recording.expectations[0] = cb;
+    handle(context: RuntimeContext<Args, Ret>): Ret {
+        this.actualCalls ++;
+        if (this.expectedCalls.getMaximum() < this.actualCalls) {
+            throw new Error(`Unexpected call: TODO: better error message`);
+        }
+        return this.handler(context);
+    }
+
+    toString(): string {
+        return `${this.isGetter ? '' : this.methodSignature()} : expected ${this.expectedCalls.toString()}, received ${this.actualCalls}`;
+    }
+
+    isSatisfied(): boolean {
+        return this.expectedCalls.contains(this.actualCalls);
+    }
+
+    private methodSignature(): string {
+        return `(${this.args.map(a => fmt`${a}`).join(', ')})`
     }
 }
 
-export interface ExpectationSetter<T extends UnknownRecording> { };
+export type ExpectationHandlingResult<T> = MatchedExpectation<T> | UnmatchedExpectation;
 
-export interface ExpectationSetterFactory<T extends UnknownRecording> {
-    (api: ExpectationSetterApi<T>): Partial<ExpectationSetter<T>>;
+export class MockExpectations<Args extends unknown[], Ret> {
+
+    constructor(public readonly path: string,
+                private isGetter: boolean) { }
+
+    private expectations: Array<MockExpectation<Args, Ret>> = [];
+
+    addExpectation(args: Args, handler: ExpectationHandler<Args, Ret>): void {
+        this.expectations.push(new MockExpectation(args, this.isGetter, ZERO_OR_MORE, handler));
+    }
+
+    setLastExpectationRange(range: Range) {
+        if (this.expectations.length === 0) {
+            throw new Error('No behavior defined. You need to first define a behavior with for instance .return() or .useValue(), then specify how many times that call was expected.')
+        }
+        const lastExpectation = this.expectations[this.expectations.length - 1];
+        lastExpectation.expectedCalls = range;
+    }
+
+    resetExpectations() {
+        this.expectations.length = 0;
+    }
+
+    handle(context: RuntimeContext<Args, Ret>): ExpectationHandlingResult<Ret> {
+        const matching = this.firstMatchingExpectation(context);
+        if (matching == null) {
+            return { error: 'No matching expectations' }; // TODO: Better error message showing all attempted expectations
+        }
+        return { result: matching.handle(context) };
+    }
+
+    toString(): string {
+        return this.expectations.map(e => `${this.path}${e.toString()}`).join('\n');
+    }
+
+    getAllUnsatisfied(): MockExpectation<Args, Ret>[] {
+        return this.expectations.filter(e => !e.isSatisfied())
+    }
+
+    reset(): void {
+        this.expectations.length = 0;
+    }
+
+    private firstMatchingExpectation(context: RuntimeContext<Args, Ret>): MockExpectation<Args, Ret> | null {
+        for (const exp of this.expectations) {
+            if (exp.matches(context)) {
+                return exp;
+            }
+        }
+        return null;
+    }
 }
 
-const expectationSetterFactories: ExpectationSetterFactory<UnknownRecording>[] = [];
+/**
+ * Gathers all expectations set within a context.
+ */
+export class ExpectationsRegistry {
 
-export function registerExpectations(plugin: ExpectationSetterFactory<UnknownRecording>): void {
-    expectationSetterFactories.push(plugin as any);
+    /**
+     * To be kept alphabetically sorted by expectation path.
+     */
+    private allExpectations: Array<MockExpectations<unknown[], unknown>> = [];
+
+    addExpectations(expectation: MockExpectations<unknown[], unknown>) {
+        const insertIndex = this.findIndexToInsert(expectation);
+        this.allExpectations.splice(insertIndex, 0, expectation);
+    }
+
+    toString(): string {
+        return this.allExpectations.map(e => e.toString()).filter(nonEmptyString).join('\n');
+    }
+
+    verify(): void {
+        const unsatisfied = this.allExpectations
+                .map(e => e.getAllUnsatisfied().map(expectation => e.path + expectation.toString()))
+                .filter(e => e.length > 0)
+                .reduce((prev, curr) => prev.concat(curr), []);
+        if (unsatisfied.length > 0) {
+            throw new Error(`There are ${unsatisfied.length} unsatisfied expectations:\n` +
+                    unsatisfied.map((s, idx) => `${idx}. ${s.toString()}`).join('\n'));
+        }
+    }
+
+    reset(): void {
+        this.allExpectations.forEach((e) => {
+            e.reset();
+        });
+    }
+
+    private findIndexToInsert(expectation: MockExpectations<unknown[], unknown>) {
+        const first = this.allExpectations.find((exp) => exp.path >= expectation.path);
+        if (first == null) {
+            return this.allExpectations.length;
+        }
+        return this.allExpectations.indexOf(first);
+    }
 }
 
-export function createExpectationSetter(recording: UnknownRecording): ExpectationSetter<UnknownRecording> {
-    const api: ExpectationSetterApi<UnknownRecording> = new ExpectationSetterApi(getMetadata(recording, 'recording'), () => setter);
-    const setter = expectationSetterFactories
-        .map<ExpectationSetter<UnknownRecording>>(f => f(api) as ExpectationSetter<UnknownRecording>)
-        .reduce((prev, curr) => ({ ...prev, ...curr}), {} as ExpectationSetter<UnknownRecording>);
-    return setter;
+function nonEmptyString(t: string) {
+    return t !== '';
 }

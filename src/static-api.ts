@@ -1,12 +1,12 @@
 /*
  * Top-level API
  */
-import { ConstructorType, NotAConstructorType } from './base-types';
+import { ConstructorType, NotAConstructorType, AnyFunction } from './base-types';
 import { TsMockError } from './error';
-import { InstanceBackedMock, Mock, mockClass, mockInterface, mockObject, getMockInstance } from './mocks';
+import { Mock, mockClass, mockInterface, mockObject, getMockInstance, verifyMock, resetMock } from './mocks';
 import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
-import { ExpectationSetter, createExpectationSetter } from './expectations';
 import { hasMetadata, GetMetadata } from './metadata';
+import { createExpectationSetter, ExpectationSetter } from './plugin-api';
 
 
 /**
@@ -32,8 +32,12 @@ import { hasMetadata, GetMetadata } from './metadata';
  * ```
  */
 export function mock<T>(name?: string): Mock<T>;
-export function mock<T extends ConstructorType<any>>(constructor: T, ...args: ConstructorParameters<T>): InstanceBackedMock<InstanceType<T>>;
-export function mock<T>(inst: NotAConstructorType<T, TsMockError<'You need to pass additional parameters after the constructor like this: `mock(Ctr, ...args)`. Missing parameters:' & (T extends ConstructorType<any> ? ConstructorParameters<T> : never)>>): InstanceBackedMock<T>;
+export function mock<T extends ConstructorType<any>>(constructor: T, ...args: ConstructorParameters<T>): Mock<InstanceType<T>>;
+export function mock<T extends AnyFunction>(name?: string): Mock<T>;
+export function mock<T>(inst: NotAConstructorType<
+        T extends AnyFunction ? TsMockError<'This function is not a constructor. Use a virtual mock to mock a function.'> : T, 
+        TsMockError<'You need to pass additional parameters after the constructor like this: `mock(Ctr, ...args)`. Missing parameters:' & (T extends ConstructorType<any> ? ConstructorParameters<T> : never)>>
+    ): Mock<T>;
 export function mock<T extends object>(toMock: string | ConstructorType<any> | T | undefined, ...args: unknown[]): Mock<T> {
     if (toMock == undefined) {
         toMock = 'stub';
@@ -79,4 +83,20 @@ export function when<T extends Recording<any>>(t: object): ExpectationSetter<T> 
  */
 export function instance<T>(t: Mock<T>): T {
     return getMockInstance(t);
+}
+
+/**
+ * Checks that all expected calls were received.
+ * 
+ * Throws an error if any expected call was not received.
+ */
+export function verify(t: Mock<unknown>): void {
+    return verifyMock(t);
+}
+
+/**
+ * Resets all expected calls on this mock.
+ */
+export function reset(t: Mock<unknown>): void {
+    return resetMock(t);
 }

@@ -10,7 +10,6 @@ export type WithMetadata<Key extends string, T> = {
     };
 }
 
-export type WithoutMetadata<Key extends string, T extends WithMetadata<Key, unknown>> = Omit<T, typeof METADATA_KEY>;
 export type GetMetadata<Key extends string, T extends WithMetadata<Key, any>> = T extends WithMetadata<Key, infer DATA> ? DATA : never;
 export function getMetadata<Key extends string, DATA>(t: WithMetadata<Key, DATA>, key: Key): DATA {
     const metadata = t[METADATA_KEY];

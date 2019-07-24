@@ -11,7 +11,7 @@ Proxy + assertions + matchers + nice API + extensible
 - [x] Member access mocking
 - [x] Method call mocking
 - [x] Through access to instance backed mocks
-- [ ] Deep property access
+- [x] Deep property access
 - [ ] Expectation count and sequences
 - [ ] Matchers
 - [ ] Verify all mocks

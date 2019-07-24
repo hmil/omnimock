@@ -13,17 +13,17 @@
  * plugin.registerExpectations(...);
  * ```
  */
-import { registerExpectations } from './expectations';
+import { UnknownRecording, AnyRecording, RECORDING_METADATA_KEY, RecordedArguments, RecordedType } from './recording';
+import { GetMetadata, getMetadata } from './metadata';
+import { ExpectationHandler, MockExpectations } from './expectations';
 
-
-export { ExpectationSetter, ExpectationSetterFactory } from './expectations';
+export * from './range';
 export { TsMockError } from './error';
 export { 
     UnknownRecording, 
     RecordedType, 
     GetterRecording,
     IfMethod,
-    IfVirtual,
     isGetterRecording,
     isMethodCallRecording,
     MethodCallRecording,
@@ -38,3 +38,44 @@ export function mockObjectNotSupported(pluginName: string): never {
 - The object you are trying to mock was not obtained from the 'mock()' function.
 - The plugin '${pluginName}' is not compatible with this version of tsmock.`)
 }
+
+export interface ExpectationSetter<T extends UnknownRecording> { };
+
+/**
+ * @internal
+ */
+export function createExpectationSetter(recording: UnknownRecording): ExpectationSetter<UnknownRecording> {
+    const api: ExpectationSetterApi<UnknownRecording> = new ExpectationSetterApi(getMetadata(recording, 'recording'), () => setter);
+    const setter = expectationSetterFactories
+        .map<ExpectationSetter<UnknownRecording>>(f => f(api) as ExpectationSetter<UnknownRecording>)
+        .reduce((prev, curr) => ({ ...prev, ...curr}), {} as ExpectationSetter<UnknownRecording>);
+    return setter;
+}
+
+class ExpectationSetterApi<T extends AnyRecording> {
+
+    constructor(
+            private readonly recording: GetMetadata<RECORDING_METADATA_KEY, T>,
+            public readonly chain: () => ExpectationSetter<T>) {
+    }
+
+    answer(cb: ExpectationHandler<RecordedArguments<T>, RecordedType<T>>): void {
+        this.recording.expect();
+        this.recording.expectations.addExpectation(this.recording.args, cb);
+    }
+
+    get expectations(): MockExpectations<RecordedArguments<T>, RecordedType<T>> {
+        return this.recording.expectations;
+    }
+}
+
+interface ExpectationSetterFactory<T extends UnknownRecording> {
+    (api: ExpectationSetterApi<T>): Partial<ExpectationSetter<T>>;
+}
+
+const expectationSetterFactories: ExpectationSetterFactory<UnknownRecording>[] = [];
+
+function registerExpectations(plugin: ExpectationSetterFactory<UnknownRecording>): void {
+    expectationSetterFactories.push(plugin as any);
+}
+

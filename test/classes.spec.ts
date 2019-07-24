@@ -1,6 +1,5 @@
 import { CatClass, Container, Tag } from './fixtures/classes';
-import { instance, mock, when } from '../src';
-import { InstanceBackedMock } from '../src/mocks';
+import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {
 
@@ -73,18 +72,22 @@ describe('A mock based on a class', () => {
 
         it('can access base property of instance backed mocks', () => {
             const concreteMock = mock(CatClass, 'Olinka');
-            const virtualMock = mock<CatClass>();
-
+            
             when(concreteMock.color).useActual();
             when(concreteMock.name).useActual();
             when(concreteMock.food).useActual();
-            when(virtualMock.name).useActual.__TSMOCK_ERROR__;
-
+            
             const concrete = instance(concreteMock);
-
+            
             expect(concrete.color).toBe('gray');
             expect(concrete.name).toBe('Olinka');
             expect(concrete.food).toBe('oreos');
+        });
+
+        xit('is undefined behavior to use actual on a virtual mock', () => {
+            const virtualMock = mock<CatClass>();
+            when(virtualMock.name).useActual();
+            expect(virtualMock.name).toBeUndefined();
         });
     });
     
@@ -96,7 +99,7 @@ describe('A mock based on a class', () => {
     
             when(catMock.placeIn({} as any)).return('placed');
             when(catMock.purr()).throw(new Error('mock error'));
-            when(catMock.receive({})).call((data) => `This is ${data}`);
+            when(catMock.receive(anyString())).call((data) => `This is ${data}`);
 
             expect(cat.placeIn({} as any)).toBe('placed');
             expect(() => cat.purr()).toThrow('mock error');
@@ -109,18 +112,15 @@ describe('A mock based on a class', () => {
             const virtualMock = mock<CatClass>();
 
             when(concreteMock.purr()).callThrough();
-            when(concreteMock.greet('anyone')).callThrough();
-            when(virtualMock.purr()).callThrough.__TSMOCK_ERROR__;
-            // What happens if someone forces through the type system?
-            when((virtualMock as any as InstanceBackedMock<CatClass>).purr()).callThrough();
+            when(concreteMock.greet(anyString())).callThrough();
+            when(virtualMock.purr()).callThrough();
             when(concreteMock.name).useActual();
 
             const concrete = instance(concreteMock);
 
             expect(concrete.greet('jack')).toBe('Hello jack');
             expect(concrete.purr()).toBe('Rrrr Olinka');
-            concreteMock.color
-            expect(() => instance(virtualMock).purr()).toThrow();
+            expect(() => instance(virtualMock).purr()).toThrow(/Cannot call/);
         });
     });
 
@@ -153,14 +153,14 @@ describe('A mock based on a class', () => {
 
         it('works with methods and fake', async () => {
             const catMock = mock(CatClass, 'tommy');
-            when(catMock.getTag().manufacturer.fetch()).call(async () => 'I <3 chaining');
-            expect(await instance(catMock).getTag().manufacturer.fetch()).toBe('I <3 chaining');
+            when(catMock.getTag(1).manufacturer.fetch()).call(async () => 'I <3 chaining');
+            expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('I <3 chaining');
         });
 
         it('works with methods and pass-through', async () => {
             const catMock = mock(CatClass, 'tommy');
-            when(catMock.getTag().manufacturer.fetch()).callThrough();
-            expect(await instance(catMock).getTag().manufacturer.fetch()).toBe('nokia');
+            when(catMock.getTag(1).manufacturer.fetch()).callThrough();
+            expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('nokia');
         });
     
         it('catches unexpected accesses', () => {

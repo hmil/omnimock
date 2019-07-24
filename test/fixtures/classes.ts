@@ -26,7 +26,7 @@ export class CatClass extends Container {
         }
     };
 
-    public getTag(): Tag {
+    public getTag(_tagNumber: number): Tag {
         return this.tag;
     }
     
