@@ -1,5 +1,6 @@
 import { Range, ZERO_OR_MORE } from './range';
-import { match, fmt } from './matchers';
+import { match } from './matchers';
+import { formatArgArray } from './formatting';
 
 interface RuntimeContext<Args, Ret> {
     getOriginalContext: () => object | undefined;
@@ -21,13 +22,12 @@ interface UnmatchedExpectation {
 }
 
 
-class MockExpectation<Args extends unknown[], Ret> {
+class MockExpectation<Args extends unknown[] | undefined, Ret> {
 
     private actualCalls: number = 0;
 
     constructor(
-            private args: Args,
-            private isGetter: boolean,
+            private readonly args: Args,
             public expectedCalls: Range,
             private readonly handler: ExpectationHandler<Args, Ret>) { }
 
@@ -44,7 +44,7 @@ class MockExpectation<Args extends unknown[], Ret> {
     }
 
     toString(): string {
-        return `${this.isGetter ? '' : this.methodSignature()} : expected ${this.expectedCalls.toString()}, received ${this.actualCalls}`;
+        return `${this.methodSignature()} : expected ${this.expectedCalls.toString()}, received ${this.actualCalls}`;
     }
 
     isSatisfied(): boolean {
@@ -52,21 +52,24 @@ class MockExpectation<Args extends unknown[], Ret> {
     }
 
     private methodSignature(): string {
-        return `(${this.args.map(a => fmt`${a}`).join(', ')})`
+        return this.args === undefined ? '' : `(${formatArgArray(this.args)})`;
     }
 }
 
 export type ExpectationHandlingResult<T> = MatchedExpectation<T> | UnmatchedExpectation;
 
-export class MockExpectations<Args extends unknown[], Ret> {
+export class MockExpectations<Args extends unknown[] | undefined, Ret> {
 
-    constructor(public readonly path: string,
-                private isGetter: boolean) { }
+    constructor(public readonly path: string) { }
 
     private expectations: Array<MockExpectation<Args, Ret>> = [];
 
+    public get size() {
+        return this.expectations.length;
+    }
+
     addExpectation(args: Args, handler: ExpectationHandler<Args, Ret>): void {
-        this.expectations.push(new MockExpectation(args, this.isGetter, ZERO_OR_MORE, handler));
+        this.expectations.push(new MockExpectation(args, ZERO_OR_MORE, handler));
     }
 
     setLastExpectationRange(range: Range) {
@@ -117,17 +120,16 @@ export class MockExpectations<Args extends unknown[], Ret> {
 export class ExpectationsRegistry {
 
     /**
-     * To be kept alphabetically sorted by expectation path.
+     * Keep the order of insertion to help debug matching issues
      */
-    private allExpectations: Array<MockExpectations<unknown[], unknown>> = [];
+    private allExpectations: Array<MockExpectations<unknown[] | undefined, unknown>> = [];
 
-    addExpectations(expectation: MockExpectations<unknown[], unknown>) {
-        const insertIndex = this.findIndexToInsert(expectation);
-        this.allExpectations.splice(insertIndex, 0, expectation);
+    addExpectations(expectation: MockExpectations<unknown[] | undefined, unknown>) {
+        this.allExpectations.push(expectation);
     }
 
     toString(): string {
-        return this.allExpectations.map(e => e.toString()).filter(nonEmptyString).join('\n');
+        return this.allExpectations.filter(e => e.size > 0).map(e => `\n- ${e.path}:\n${e.toString()}`).join('\n');
     }
 
     verify(): void {
@@ -146,16 +148,4 @@ export class ExpectationsRegistry {
             e.reset();
         });
     }
-
-    private findIndexToInsert(expectation: MockExpectations<unknown[], unknown>) {
-        const first = this.allExpectations.find((exp) => exp.path >= expectation.path);
-        if (first == null) {
-            return this.allExpectations.length;
-        }
-        return this.allExpectations.indexOf(first);
-    }
-}
-
-function nonEmptyString(t: string) {
-    return t !== '';
 }

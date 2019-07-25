@@ -3,24 +3,6 @@ import { mock, instance, when, verify } from "../src";
 
 describe('Expectation quantifiers', () => {
 
-    describe('automatic chaining', () => {
-        it('allows any number of accesses', () => {
-            const catMock = mock(CatClass, 'Olinka');
-
-            when(catMock.purr()).return('hoyhoy').anyTimes();
-            when(catMock.getTag(1).manufacturer.fetch()).resolve('hoyhoy').once();
-
-            const cat = instance(catMock);
-
-            expect(() => cat.getTag).not.toThrow();
-            expect(() => cat.getTag(1)).not.toThrow();
-            expect(() => cat.getTag(1).manufacturer).not.toThrow();
-            expect(() => cat.getTag(1).manufacturer.fetch).not.toThrow();
-            expect(() => cat.getTag(1).manufacturer.fetch()).not.toThrow();
-            expect(() => verify(catMock)).not.toThrow();
-        });
-    });
-
     describe('.atLeastOnce()', () => {
         it('asserts at least one call', () => {
             const catMock = mock(CatClass, 'Olinka');

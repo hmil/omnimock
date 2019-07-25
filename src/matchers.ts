@@ -5,27 +5,26 @@ interface MatcherMetadata {
     /** Returns true if actual matches this matcher, or an error message otherwise */
     match(actual: unknown): true | string;
     name: string;
+    /** Hash is used to compare matchers */
+    hash: string;
 }
 
-export interface IMatcher extends WithMetadata<'matcher', MatcherMetadata> {
-}
+export type Matcher<T> = T & WithMetadata<'matcher', MatcherMetadata>;
 
-export function isMatcher(t: unknown): t is IMatcher {
+export function isMatcher(t: unknown): t is Matcher<typeof t> {
     return typeof t === 'object' && t != null && hasMetadata(t, 'matcher');
 }
 
 export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string {
-    const result = [strings[0]];
-    let i = 1;
-    for (const value of values) {
-        result.push(typeof value !== 'string' ? formatObjectForHumans(value) : value, strings[i++]);
-    }
-    return result.join('');
+    return [strings[0], ...values.map((value, i) => formatObjectForHumans(value) + strings[i + 1])].join('');
 }
 
 function formatObjectForHumans(obj: unknown): string {
     if (isMatcher(obj)) {
         return `<${getMetadata(obj, 'matcher').name}>`;
+    }
+    if (typeof obj === 'string') {
+        return `"${obj}"`;
     }
     if (typeof obj === 'object' && obj != null) {
         const ctrName = obj.constructor.name;
@@ -37,25 +36,55 @@ function formatObjectForHumans(obj: unknown): string {
 }
 
 
-function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): IMatcher & T {
-    return matcher((actual) => predicate(actual) || `expected ${type} but got ${typeof actual}`, `any ${type}`) as IMatcher & T;
+function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): Matcher<T> {
+    return matching((actual) => predicate(actual) || `expected ${type} but got ${typeof actual}`, `any ${type}`);
 }
 
-function matcher(match: (candidate: unknown) => true | string, name: string): IMatcher {
-    return setMetadata({} as IMatcher, 'matcher', {match, name });
+function matching<T>(match: (candidate: T) => true | string, name: string): Matcher<T> {
+    return setMetadata({} as Matcher<T>, 'matcher', { match, name });
 }
 
 interface Indexable {
     [k: string]: unknown;
 }
 
-export function same<T>(expected: T): T & IMatcher {
-    return Object.assign({}, expected, matcher((actual) => actual === expected ||
-            fmt`expected ${actual} to be the same instance as ${expected}`, fmt`same(${expected})`));
+export function same<T>(expected: T): Matcher<T> {
+    return matching((actual) => actual === expected || fmt`expected ${actual} to be the same instance as ${expected}`, fmt`same(${expected})`);
 }
 
-export function arrayEq<T extends any[]>(expected: T): T & IMatcher {
-    return Object.assign(expected.slice() as T, matcher((actual) => {
+type Comparable = string | number;
+export function greaterThan<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate > ref) || `${candidate} is no greater than ${ref}`, `greater than ${ref}`);
+}
+export function smallerThan<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate < ref) || `${candidate} is no smaller than ${ref}`, `smaller than ${ref}`);
+}
+export function greaterThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate >= ref) || `${candidate} is no greater than nor equals ${ref}`, `greater than or equal to ${ref}`);
+}
+export function smallerThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate <= ref) || `${candidate} is no smaller than nor equals ${ref}`, `smaller than or equal to ${ref}`);
+}
+export function equals<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate === ref) || `${candidate} is not strictly equal to ${ref}`, `=== ${ref}`);
+}
+export function weakEquals<T extends Comparable>(ref: T): Matcher<T> {
+    return matching((candidate) => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
+}
+export function between<T extends Comparable>(min: T | { value: T, exclusive: true }, max: T | { value: T, exclusive: true }): Matcher<T> {
+    const [ minValue, includeMin ] = (typeof min === 'object' && 'exclusive' in min) ? [ min.value, !min.exclusive] : [ min, true ];
+    const [ maxValue, includeMax ] = (typeof max === 'object' && 'exclusive' in max) ? [ max.value, !max.exclusive] : [ max, true ];
+    const rangeText = `${includeMin ? '[' : ']'}${minValue} ; ${maxValue}${includeMax ? ']' : '['}`;
+
+    return matching((candidate) => (
+        (candidate > minValue || includeMin && candidate === minValue) &&
+        (candidate < maxValue || includeMax && candidate === maxValue)
+    ) || `${candidate} is not in range ${rangeText}`, `range ${rangeText}`);
+}
+
+
+export function arrayEq<T extends any[]>(expected: T): Matcher<T> {
+    return Object.assign(expected.slice() as T, matching((actual) => {
         if (!(actual instanceof Array)) {
             return fmt`expected array type but got ${actual}`;
         }
@@ -75,11 +104,11 @@ export function arrayEq<T extends any[]>(expected: T): T & IMatcher {
     }, fmt`arrayEq(${expected})`));
 }
 
-export function objectEq<T extends object>(expectedUnsafe: T): T & IMatcher {
+export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
     const expectedKeys = Object.keys(expected).sort();
 
-    return Object.assign({}, expected, matcher((actual) => {
+    return Object.assign({}, expected, matching((actual) => {
         if (typeof actual !== 'object') {
             return fmt`expected variable of type object but was ${typeof actual}`;
         }
@@ -114,46 +143,47 @@ export function objectEq<T extends object>(expectedUnsafe: T): T & IMatcher {
     }, fmt`objectEq(${expected})`));
 }
 
-export function anything(): IMatcher & any {
-    return matcher(() => true, 'anything');
+export function anything(): Matcher<any> {
+    return matching(() => true, 'anything');
 }
 
-export function anyNumber(): number & IMatcher {
+export function anyNumber(): Matcher<number> {
     return typeMatcher((a): a is number => typeof a === 'number', 'number');
 }
 
-export function anyBoolean(): boolean & IMatcher {
+export function anyBoolean(): Matcher<boolean> {
     return typeMatcher((a): a is boolean => typeof a === 'boolean', 'boolean');
 }
 
-export function anyString(): string & IMatcher {
+export function anyString(): Matcher<string> {
     return typeMatcher((a): a is string => typeof a === 'string', 'string');
 }
 
-export function anyFunction(): AnyFunction & IMatcher {
+export function anyFunction(): Matcher<AnyFunction> {
     return typeMatcher((a): a is AnyFunction => typeof a === 'function', 'function');
 }
 
-export function anyObject(): any & IMatcher {
+export function anyObject(): Matcher<any> {
     return typeMatcher((a): a is object => typeof a === 'object', 'object');
 }
 
-export function anySymbol(): symbol & IMatcher {
+export function anySymbol(): Matcher<symbol> {
     return typeMatcher((a): a is symbol => typeof a === 'symbol', 'symbol');
 }
 
-export function anyArray(): any[] & IMatcher {
+export function anyArray(): Matcher<any[]> {
     return typeMatcher((a): a is any[] => Array.isArray(a), 'array');
 }
 
-export function jsonEq<T>(expected: T): T & IMatcher {
-    return Object.assign({}, expected, matcher((actual) => {
+export function jsonEq<T>(expected: T): Matcher<T> {
+    return Object.assign({}, expected, matching((actual) => {
         const serializedExpected = JSON.stringify(expected);
         const serializedActual = JSON.stringify(actual);
 
         return serializedActual === serializedExpected || `expected ${serializedExpected} but got ${serializedActual}`;
     }, fmt`jsonEq(${expected})`));
 }
+
 
 export function match(expected: unknown, actual: unknown): true | string {
     if (isMatcher(expected)) {

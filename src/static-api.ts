@@ -3,7 +3,7 @@
  */
 import { ConstructorType, NotAConstructorType, AnyFunction } from './base-types';
 import { TsMockError } from './error';
-import { Mock, mockClass, mockInterface, mockObject, getMockInstance, verifyMock, resetMock } from './mocks';
+import { Mock, mockClass, mockInterface, mockObject, getMockInstance, verifyMock, resetMock, debugMock } from './mocks';
 import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
 import { hasMetadata, GetMetadata } from './metadata';
 import { createExpectationSetter, ExpectationSetter } from './plugin-api';
@@ -40,7 +40,7 @@ export function mock<T>(inst: NotAConstructorType<
     ): Mock<T>;
 export function mock<T extends object>(toMock: string | ConstructorType<any> | T | undefined, ...args: unknown[]): Mock<T> {
     if (toMock == undefined) {
-        toMock = 'stub';
+        toMock = '<virtual mock>';
     }
     if (typeof toMock === 'function') {
         return mockClass(toMock as { new (...args: any[]): T }, args);
@@ -99,4 +99,13 @@ export function verify(t: Mock<unknown>): void {
  */
 export function reset(t: Mock<unknown>): void {
     return resetMock(t);
+}
+
+/**
+ * Return a string representing all assertions set on this mock.
+ * 
+ * Use only for debugging purposes. The format of this string may change without notice.
+ */
+export function debug(t: Mock<unknown>): string {
+    return debugMock(t);
 }

@@ -1,4 +1,4 @@
-import { CatClass, Container, Tag } from './fixtures/classes';
+import { CatClass, Container } from './fixtures/classes';
 import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {
@@ -123,55 +123,4 @@ describe('A mock based on a class', () => {
             expect(() => instance(virtualMock).purr()).toThrow(/Cannot call/);
         });
     });
-
-    describe('automatic chaining', () => {
-        it('can be achieved "manually"', () => {
-            const catMock = mock<CatClass>();
-            const tagMock = mock<CatClass['tag']>();
-            const tag = instance(tagMock);
-            const chipMock = mock<typeof tag['chip']>();
-            const chip = instance(chipMock);
-
-            when(catMock.tag).useValue(tag);
-            when(tagMock.chip).useValue(chip);
-            when(chipMock.id).useValue(123);
-
-            expect(instance(catMock).tag.chip.id).toBe(123);
-        });
-
-        it('works with getters and fake', () => {
-            const catMock = mock(CatClass, 'tommy');
-            when(catMock.tag.chip.id).useValue(456);
-            expect(instance(catMock).tag.chip.id).toBe(456);
-        });
-
-        it('works with getters and pass-through', () => {
-            const catMock = mock(CatClass, 'tommy');
-            when(catMock.tag.chip.id).useActual();
-            expect(instance(catMock).tag.chip.id).toBe(123);
-        });
-
-        it('works with methods and fake', async () => {
-            const catMock = mock(CatClass, 'tommy');
-            when(catMock.getTag(1).manufacturer.fetch()).call(async () => 'I <3 chaining');
-            expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('I <3 chaining');
-        });
-
-        it('works with methods and pass-through', async () => {
-            const catMock = mock(CatClass, 'tommy');
-            when(catMock.getTag(1).manufacturer.fetch()).callThrough();
-            expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('nokia');
-        });
-    
-        it('catches unexpected accesses', () => {
-            const catMock = mock(CatClass, 'tommy');
-
-            // Actually assert the chip path
-            when(catMock.tag.chip.id).useValue(123);
-            // And use the manufacturer path but without any assertion
-            catMock.tag.manufacturer.fetch;
-
-            expect(() => instance(catMock).tag.manufacturer.fetch).toThrow(/Unexpected.+manufacturer/);
-        });
-    })
 });

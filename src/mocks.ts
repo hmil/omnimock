@@ -2,6 +2,8 @@ import { AnyFunction, ConstructorType, FnType } from './base-types';
 import { getMetadata, METADATA_KEY, setMetadata, WithMetadata } from './metadata';
 import { GetterRecording, Recording, RecordingMetadata, RecordingType } from './recording';
 import { MockExpectations, ExpectationsRegistry } from './expectations';
+import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
+import { Matcher, match, jsonEq } from './matchers';
 
 export const MOCK_METADATA_KEY = 'mock';
 export type MOCK_METADATA_KEY = typeof MOCK_METADATA_KEY;
@@ -31,8 +33,8 @@ function instanceProxyHandlerFactory(
         getOriginalTarget: () => unknown,
         getOriginalContext: () => object | undefined,
         originalConstructor: Function | undefined,
-        expectedMemberAccess: Map<string, MockExpectations<unknown[], unknown>>,
-        expectedCalls: MockExpectations<unknown[], unknown>
+        expectedMemberAccess: Map<string, MockExpectations<unknown[] | undefined, unknown>>,
+        expectedCalls: MockExpectations<unknown[] | undefined, unknown>
 ): ProxyHandler<any> {
     return {
         getPrototypeOf(target: any) {
@@ -59,7 +61,7 @@ function instanceProxyHandlerFactory(
                 getOriginalTarget: getOriginal
             });
             if ('error' in result) {
-                throw new Error(`Unexpected method call: TODO better error message!`);
+                throw new Error(`Unexpected method call: ${expectedCalls.path}(${formatArgArray(argArray)})`);
             }
             return result.result;
         },
@@ -81,7 +83,7 @@ function instanceProxyHandlerFactory(
                     const answer = expectedMemberAccess.get(prop);
                     if (answer != null) {
                         const result = answer.handle({
-                            args: [],
+                            args: undefined,
                             context: target,
                             getOriginalContext: getOriginalTarget as () => object,
                             getOriginalTarget: getOriginal
@@ -90,7 +92,7 @@ function instanceProxyHandlerFactory(
                             return result.result;
                         }
                     }
-                    throw new Error(`Unexpected property access: ${(originalConstructor || Object).name}.${prop}`);
+                    throw new Error(`Unexpected property access: ${expectedCalls.path}.${prop}`);
                 }
             }
             return getOriginal(); 
@@ -128,7 +130,7 @@ interface MockParams {
     /**
      * Expectations for the current symbol.
      */
-    expectations: MockExpectations<unknown[], unknown>;
+    expectations: MockExpectations<unknown[] | undefined, unknown>;
 
     /**
      * Cause the current chain to become visible on the mock instance.
@@ -153,7 +155,7 @@ interface MockParams {
     /**
      * The arguments (or argument matchers) passed to this mocked call.
      */
-    args: unknown[];
+    args: unknown[] | undefined;
 }
 
 /**
@@ -161,43 +163,50 @@ interface MockParams {
  */
 function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & GetterRecording {
 
-    const stub = maybeStub == null ? createVirtualMockStub<ChainableMock<T> & GetterRecording>('${target}.${prop}') as any : maybeStub;
+    const stub = maybeStub == null ? createVirtualMockStub<ChainableMock<T> & GetterRecording>(params.mockPath) as any : maybeStub;
+
+    // Becomes true once the expectation has materialized;
+    let hasMaterialized = false;
 
     function materializeChain() {
-        params.expectations.addExpectation(
-            params.args,
-            (runtime) => {
-                const stub = createFunctionWithName('virtual mock');
-                return new Proxy(stub as object, instanceProxyHandlerFactory(
-                        runtime.getOriginalTarget,
-                        runtime.getOriginalContext,
-                        params.originalConstructor,
-                        expectedMemberAccess,
-                        expectedCalls));
-            });
-        params.materializeChain();
+        if (!hasMaterialized) {
+            hasMaterialized = true;
+            params.expectations.addExpectation(
+                params.args,
+                (runtime) => {
+                    const stub = createFunctionWithName('chain');
+                    return new Proxy(stub as object, instanceProxyHandlerFactory(
+                            runtime.getOriginalTarget,
+                            runtime.getOriginalContext,
+                            params.originalConstructor,
+                            expectedMemberAccess,
+                            expectedCalls));
+                });
+            params.materializeChain();
+        }
     }
 
-    function createExpectations(path: string, isGetter: boolean): MockExpectations<unknown[], unknown> {
-        const expectations = new MockExpectations<unknown[], unknown>(path, isGetter);
+    function createExpectations(path: string): MockExpectations<unknown[] | undefined, unknown> {
+        const expectations = new MockExpectations<unknown[] | undefined, unknown>(path);
         params.registry.addExpectations(expectations);
         return expectations;
     }
 
-    const expectedMemberAccess: Map<string, MockExpectations<unknown[], unknown>> = new Map();
-    const expectedCalls: MockExpectations<unknown[], unknown> = createExpectations(params.mockPath, false);
+    const expectedMemberAccess: Map<string, MockExpectations<unknown[] | undefined, unknown>> = new Map();
+    const expectedCalls: MockExpectations<unknown[] | undefined, unknown> = createExpectations(params.mockPath);
+    const mockCache = new ChainingMockCache();
 
     function getOrCreateExpectations(prop: string) {
         let expectations = expectedMemberAccess.get(prop);
         if (expectations != null) {
             return expectations;
         }
-        expectations = createExpectations(params.mockPath + humanReadableObjectPropertyAccess(prop), true);
+        expectations = createExpectations(params.mockPath + humanReadableObjectPropertyAccess(prop));
         expectedMemberAccess.set(prop, expectations);
         return expectations;
     };
 
-    const recordingMetadata: RecordingMetadata<RecordingType, unknown[], unknown> = {
+    const recordingMetadata: RecordingMetadata<RecordingType, unknown[] | undefined, unknown> = {
         expectations: params.expectations,
         args: params.args,
         ret: {} as any, // TODO
@@ -210,15 +219,16 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
 
     const handler: ProxyHandler<ChainableMock<T> & GetterRecording> = {
         apply(target: ChainableMock<T>, _thisArg: ChainableMock<T>, argArray?: unknown[]): ChainableMock<unknown> {
-            return mockNext({
+            const args = argArray || [];
+            return mockCache.getOrElse(args, () => mockNext({
                 recordingType: 'call',
                 expectations: expectedCalls,
                 materializeChain: materializeChain,
                 originalConstructor: target.constructor, // "target" can only be a function here so it must have a constructor
-                mockPath: params.mockPath + `(${(argArray || []).map(a => `${a}`).join(', ')})`,
+                mockPath: params.mockPath + `(${formatArgArray(argArray)})`, // TODO: Factor out params formatting
                 registry: params.registry,
-                args: argArray || [],
-            });
+                args: args
+            }));
         },
         get(target: ChainableMock<T>, prop: PropertyKey, receiver: unknown): Map<string, any> | ChainableMock<unknown> {
             if (typeof prop !== 'string') {
@@ -228,27 +238,20 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                 return Reflect.get(stub, METADATA_KEY, receiver);
             }
 
-            return mockNext({
+            // For property access, you want to store the already produced mocks 
+            return mockCache.getOrElse(prop, () => mockNext({
                 recordingType: 'getter',
                 expectations: getOrCreateExpectations(prop),
                 materializeChain: materializeChain,
                 originalConstructor: Object,
                 mockPath: params.mockPath + humanReadableObjectPropertyAccess(prop),
                 registry: params.registry,
-                args: []
-            });
+                args: undefined
+            }));
         }
     };
 
     return new Proxy(stub, handler);
-}
-
-const IDENTIFIER_RX = /^[$A-Z_][0-9A-Z_$]*$/i;
-function humanReadableObjectPropertyAccess(name: string) {
-    if (IDENTIFIER_RX.test(name)) {
-        return `.${name}`;
-    }
-    return `['${name}']`;
 }
 
 function mockFirst<T extends object>(backingInstance: T, originalConstructor: Function): Mock<T> {
@@ -275,7 +278,7 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: Fu
 
     const firstMock = mockNext<T>({
         recordingType: 'call',
-        expectations: new MockExpectations(originalConstructor.name, false),
+        expectations: new MockExpectations(originalConstructor.name),
         materializeChain: () => {},
         originalConstructor,
         mockPath: originalConstructor.name,
@@ -301,6 +304,10 @@ export function resetMock(mock: Mock<any>): void {
     getMetadata(mock, 'mock').expectationsRegistry.reset();
 }
 
+export function debugMock(mock: Mock<any>): string {
+    return getMetadata(mock, 'mock').expectationsRegistry.toString();
+}
+
 export function mockClass<T extends ConstructorType<any>>(klass: T, params: ConstructorParameters<T>): Mock<InstanceType<T>> {
     const toMock = instantiate(klass, params);
     return mockFirst(toMock, klass);
@@ -314,4 +321,32 @@ export function mockInterface<T extends object>(name: string): Mock<T> {
 
 export function mockObject<T extends object>(toMock: T): Mock<T> {
     return mockFirst(toMock, toMock.constructor);
+}
+
+
+// TODO: move this to its own file
+
+type KeyType = string | unknown[]; // Key is either a property name or an argument array
+type ValueType = ChainableMock<unknown>;
+
+/**
+ * This very usage-specific cache is meant only to cache expectations for the purpose of automatic chaining.
+ * It will not behave like you'd expect a generic cache to behave.
+ */
+export class ChainingMockCache {
+
+    private data: Array<{ key: Matcher<KeyType>, value: ValueType}> = [];
+
+    public getOrElse(key: KeyType, ifAbsent: () => ValueType): ValueType {
+        for (const entry of this.data) {
+            if (match(entry.key, key) === true) {
+                return entry.value;
+            }
+        }
+
+        const value = ifAbsent();
+        this.data.push({ key: jsonEq(key), value });
+
+        return value;
+    }
 }

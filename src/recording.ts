@@ -6,7 +6,7 @@ export type RecordingType = 'getter' | 'call';
 export const RECORDING_METADATA_KEY = 'recording';
 export type RECORDING_METADATA_KEY = typeof RECORDING_METADATA_KEY;
 
-export interface RecordingMetadata<Type extends RecordingType, Args extends unknown[], Ret> {
+export interface RecordingMetadata<Type extends RecordingType, Args extends unknown[] | undefined, Ret> {
     readonly type: Type;
     readonly args: Args;
     readonly ret: Ret;
