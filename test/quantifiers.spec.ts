@@ -5,7 +5,7 @@ describe('Expectation quantifiers', () => {
 
     describe('.atLeastOnce()', () => {
         it('asserts at least one call', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.purr()).return('hoyhoy').atLeastOnce();
 
@@ -17,7 +17,7 @@ describe('Expectation quantifiers', () => {
         });
 
         it('asserts at least one member access', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.color).useValue('hoyhoy').atLeastOnce();
 
@@ -31,7 +31,7 @@ describe('Expectation quantifiers', () => {
 
     describe('.atMostOnce()', () => {
         it('asserts at most one call', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.purr()).return('hoyhoy').atMostOnce();
 
@@ -42,7 +42,7 @@ describe('Expectation quantifiers', () => {
         });
 
         it('asserts at most one member access', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.color).useValue('hoyhoy').atMostOnce();
 
@@ -55,7 +55,7 @@ describe('Expectation quantifiers', () => {
 
     describe('.once()', () => {
         it('asserts exactly one call', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.purr()).useValue('hoyhoy').once();
 
@@ -66,7 +66,7 @@ describe('Expectation quantifiers', () => {
         });
 
         it('asserts exactly one member access', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.color).useValue('hoyhoy').once();
 
@@ -79,7 +79,7 @@ describe('Expectation quantifiers', () => {
 
     describe('.times(n)', () => {
         it('asserts an arbitrary number of calls', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.purr()).useValue('hoyhoy').times(2);
 
@@ -92,7 +92,7 @@ describe('Expectation quantifiers', () => {
         });
 
         it('asserts an arbitrary number of member accesses', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
 
             when(catMock.color).useValue('hoyhoy').times(2);
 

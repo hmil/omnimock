@@ -2,10 +2,15 @@ import { mock, when, instance } from "../src";
 
 describe('mocking functions', () => {
 
-    // This use-case is fairly limited but it is a good stress test for the framework.
-    it('allows setting fake value', () => {
-        const virtualMock = mock<() => string>();
-        when(virtualMock()).return('virtual');
-        expect(instance(virtualMock)()).toBe('virtual');
+    it('allows faking a function', () => {
+        const virtualMock = mock<(arg: number) => string>();
+        when(virtualMock(2)).return('virtual');
+        expect(instance(virtualMock)(2)).toBe('virtual');
+    });
+
+    it('backed mocks can call the underlying function', () => {
+        const backedMock = mock((arg: number) => `I'm ${arg} years old`);
+        when(backedMock(25)).callThrough();
+        expect(instance(backedMock)(25)).toBe("I'm 25 years old");
     });
 });

@@ -66,6 +66,22 @@ function instanceProxyHandlerFactory(
             return result.result;
         },
 
+        ownKeys (_target) {
+            return Reflect.ownKeys(getOriginalTarget() as object).filter((k) => k !== METADATA_KEY);
+        },
+
+        getOwnPropertyDescriptor: function(target, prop): PropertyDescriptor | undefined {
+            if (prop === METADATA_KEY) {
+                return {
+                    configurable: false,
+                    enumerable: false,
+                    value: null,
+                    writable: false,
+                }
+            }
+            return Reflect.getOwnPropertyDescriptor(target, prop);
+        },
+
         get(target: object, prop: PropertyKey, receiver: unknown) {
             function getOriginal() {
                 const originalTarget = getOriginalTarget();
@@ -174,7 +190,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
             params.expectations.addExpectation(
                 params.args,
                 (runtime) => {
-                    const stub = createFunctionWithName('chain');
+                    // const stub = createFunctionWithName('chain');
                     return new Proxy(stub as object, instanceProxyHandlerFactory(
                             runtime.getOriginalTarget,
                             runtime.getOriginalContext,
@@ -273,8 +289,8 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: Fu
         },
         expectationsRegistry: registry
     };
-    const stub = createVirtualMockStub<ChainableMock<T> & GetterRecording & WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>>>('root');
-    setMetadata(stub, 'mock', mockMetadata);
+    // const stub = createVirtualMockStub<ChainableMock<T> & GetterRecording & WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>>>('root');
+    setMetadata(backingInstance as WithMetadata<'mock', MockMetadata<T>>, 'mock', mockMetadata);
 
     const firstMock = mockNext<T>({
         recordingType: 'call',
@@ -284,7 +300,7 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: Fu
         mockPath: originalConstructor.name,
         registry: registry,
         args: []
-    }, stub);
+    }, backingInstance);
 
     const fmMetadata = getMetadata(firstMock, 'recording');
     fmMetadata.expect();
@@ -308,18 +324,12 @@ export function debugMock(mock: Mock<any>): string {
     return getMetadata(mock, 'mock').expectationsRegistry.toString();
 }
 
-export function mockClass<T extends ConstructorType<any>>(klass: T, params: ConstructorParameters<T>): Mock<InstanceType<T>> {
-    const toMock = instantiate(klass, params);
-    return mockFirst(toMock, klass);
+export function createVirtualMock<T extends object>(name: string): Mock<T> {
+    const toMock = createFunctionWithName(name) as T;
+    return mockFirst(toMock, toMock.constructor);
 }
 
-export function mockInterface<T extends object>(name: string): Mock<T> {
-    const klass = createClassWithName<T>(name);
-    const toMock = instantiate(klass, []);
-    return mockFirst(toMock, klass);
-}
-
-export function mockObject<T extends object>(toMock: T): Mock<T> {
+export function createBackedMock<T extends object | AnyFunction>(toMock: T): Mock<T> {
     return mockFirst(toMock, toMock.constructor);
 }
 

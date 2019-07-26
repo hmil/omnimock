@@ -1,9 +1,9 @@
 /*
  * Top-level API
  */
-import { ConstructorType, NotAConstructorType, AnyFunction } from './base-types';
+import { AnyFunction } from './base-types';
 import { TsMockError } from './error';
-import { Mock, mockClass, mockInterface, mockObject, getMockInstance, verifyMock, resetMock, debugMock } from './mocks';
+import { Mock, getMockInstance, verifyMock, resetMock, debugMock, createVirtualMock, createBackedMock } from './mocks';
 import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
 import { hasMetadata, GetMetadata } from './metadata';
 import { createExpectationSetter, ExpectationSetter } from './plugin-api';
@@ -32,23 +32,15 @@ import { createExpectationSetter, ExpectationSetter } from './plugin-api';
  * ```
  */
 export function mock<T>(name?: string): Mock<T>;
-export function mock<T extends ConstructorType<any>>(constructor: T, ...args: ConstructorParameters<T>): Mock<InstanceType<T>>;
-export function mock<T extends AnyFunction>(name?: string): Mock<T>;
-export function mock<T>(inst: NotAConstructorType<
-        T extends AnyFunction ? TsMockError<'This function is not a constructor. Use a virtual mock to mock a function.'> : T, 
-        TsMockError<'You need to pass additional parameters after the constructor like this: `mock(Ctr, ...args)`. Missing parameters:' & (T extends ConstructorType<any> ? ConstructorParameters<T> : never)>>
-    ): Mock<T>;
-export function mock<T extends object>(toMock: string | ConstructorType<any> | T | undefined, ...args: unknown[]): Mock<T> {
+export function mock<T extends AnyFunction | object>(backing: T): Mock<T>;
+export function mock<T extends AnyFunction | object>(toMock: string | T | undefined): Mock<T> {
     if (toMock == undefined) {
         toMock = '<virtual mock>';
     }
-    if (typeof toMock === 'function') {
-        return mockClass(toMock as { new (...args: any[]): T }, args);
-    }
     if (typeof toMock === 'string') {
-        return mockInterface(toMock);
+        return createVirtualMock(toMock);
     }
-    return mockObject(toMock);
+    return createBackedMock(toMock);
 }
 
 /**

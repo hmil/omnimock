@@ -2,7 +2,7 @@
  * Stores metadata safely on a namespace on objects
  */
 
-export const METADATA_KEY = '__TSMOCK__';
+export const METADATA_KEY = '__OMNIMOCK__';
 
 export type WithMetadata<Key extends string, T> = {
     [METADATA_KEY]: {

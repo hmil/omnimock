@@ -3,11 +3,12 @@ import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {
 
-    it('can instantiate with or without constructor params', () => {
-        const catMock = mock(CatClass, 'Olinka');
-        const containerMock = mock(Container);
+    it('preserves instanceof property', () => {
+        const catMock = mock(new CatClass('Olinka'));
+        const containerMock = mock(new Container());
 
         expect(instance(catMock)).toBeInstanceOf(CatClass);
+        expect(instance(catMock)).toBeInstanceOf(Container);
         expect(instance(containerMock)).toBeInstanceOf(Container);
         expect(instance(containerMock)).not.toBeInstanceOf(CatClass);
     });
@@ -19,7 +20,7 @@ describe('A mock based on a class', () => {
 
     describe('property access', () => {
         it('can mock property access', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
             const cat = instance(catMock);
 
             const mockPurr = jest.fn(() => 'miaou');
@@ -36,7 +37,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can mock property access in getter style', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
             const cat = instance(catMock);
     
             const mockPurr = jest.fn(() => 'miaou');
@@ -53,7 +54,7 @@ describe('A mock based on a class', () => {
         });
     
         it('forwards errors in getters', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
             const cat = instance(catMock);
      
             when(catMock.food).useGetter(() => { throw new Error('not hungry') });
@@ -62,7 +63,7 @@ describe('A mock based on a class', () => {
         });
     
         it('prevents unmocked property access', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
             const cat = instance(catMock);
     
             expect(() => cat.name).toThrow(/Unexpected/);
@@ -71,7 +72,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can access base property of instance backed mocks', () => {
-            const concreteMock = mock(CatClass, 'Olinka');
+            const concreteMock = mock(new CatClass('Olinka'));
             
             when(concreteMock.color).useActual();
             when(concreteMock.name).useActual();
@@ -94,7 +95,7 @@ describe('A mock based on a class', () => {
 
     describe('method calls', () => {
         it('can mock function calls', () => {
-            const catMock = mock(CatClass, 'Olinka');
+            const catMock = mock<CatClass>();
             const cat = instance(catMock);
     
             when(catMock.placeIn({} as any)).return('placed');
@@ -108,7 +109,7 @@ describe('A mock based on a class', () => {
 
 
         it('can call through instance backed mocks', () => {
-            const concreteMock = mock(CatClass, 'Olinka');
+            const concreteMock = mock(new CatClass('Olinka'));
             const virtualMock = mock<CatClass>();
 
             when(concreteMock.purr()).callThrough();
