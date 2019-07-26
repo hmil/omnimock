@@ -1,6 +1,6 @@
 {
   "name": "omnimock",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Delightful mocks for JavaScript and TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -25,10 +25,11 @@
     "jest": "^24.8.0",
     "tslib": "^1.10.0",
     "tslint": "^5.17.0",
+    "tslint-override": "^0.5.1",
     "typescript": "^3.1.0",
     "typestrict": "^1.0.2"
   },
-  "dependencies": {
-    "tslint-override": "^0.5.1"
+  "peerDependencies": {
+    "typescript": ">=3.1.0"
   }
 }

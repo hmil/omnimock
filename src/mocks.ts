@@ -20,12 +20,6 @@ export function instantiate<T extends ConstructorType<any>>(klass: T, params: Co
 function createFunctionWithName(name: string) {
     return { [name](){} }[name];
 }
-/**
- * Creates a class with a dynamic name.
- */
-function createClassWithName<T>(name: string): { new (...args: any[]): T } {
-    return { [name]: class{} }[name] as ConstructorType<T>;
-}
 
 const FILTERED_PROPS = Object.getOwnPropertyNames(Object.prototype);
 
