@@ -1,10 +1,10 @@
 {
-  "name": "tsmock",
+  "name": "omnimock",
   "version": "0.0.1",
   "description": "Delightful mocks for JavaScript and TypeScript.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "repository": "https://github.com/hmil/tsmock.git",
+  "repository": "https://github.com/hmil/omnimock.git",
   "author": "Hadrien Milano <hmil.fr>",
   "license": "Apache-2.0",
   "scripts": {

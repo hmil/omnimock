@@ -2,7 +2,7 @@
  * Top-level API
  */
 import { AnyFunction } from './base-types';
-import { TsMockError } from './error';
+import { OmniMockError } from './error';
 import { Mock, getMockInstance, verifyMock, resetMock, debugMock, createVirtualMock, createBackedMock } from './mocks';
 import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
 import { hasMetadata, GetMetadata } from './metadata';
@@ -62,8 +62,8 @@ export function mock<T extends AnyFunction | object>(toMock: string | T | undefi
  * ```
  */
 export function when<T extends Recording<any>>(t: T): ExpectationSetter<T>;
-export function when(t: object): TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
-export function when<T extends Recording<any>>(t: object): ExpectationSetter<T> | TsMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
+export function when(t: object): OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
+export function when<T extends Recording<any>>(t: object): ExpectationSetter<T> | OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
     if (!hasMetadata<RECORDING_METADATA_KEY, GetMetadata<RECORDING_METADATA_KEY, UnknownRecording>>(t, 'recording')) {
         throw new Error('`when` needs to be invoked on a mock. Did you forget to `mock()` your object?');
     }

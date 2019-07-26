@@ -2,12 +2,12 @@
 /**
  * Type-level error, used to provide helpful debugging information at compile time.
  */
-export interface TsMockError<T extends string> {
-    __TSMOCK_ERROR__: {
+export interface OmniMockError<T extends string> {
+    __OMNIMOCK_ERROR__: {
         [k in T]: null;
     }
 }
 
-export function suppressCompileTimeError<T>(t: T): T & TsMockError<any> {
+export function suppressCompileTimeError<T>(t: T): T & OmniMockError<any> {
     return t as any;
 }

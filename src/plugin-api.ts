@@ -1,13 +1,13 @@
 /**
- * The plugin authoring API. Lets third-party module augment the features of tsmock.
+ * The plugin authoring API. Lets third-party module augment the features of omnimock.
  * 
  * All runtime components of the api are wrapped in the `plugin` object to avoid any confusion.
  * All types are exported from the top-level.
  * 
  * ```ts
- * import { plugin, ExpectationSetter } from 'tsmock';
+ * import { plugin, ExpectationSetter } from 'omnimock';
  * 
- * declare module "tsmock" {
+ * declare module "omnimock" {
  *     interface ExpectationSetter<...> extends MyCustomExpectationSetter<...>
  * }
  * plugin.registerExpectations(...);
@@ -18,7 +18,7 @@ import { GetMetadata, getMetadata } from './metadata';
 import { ExpectationHandler, MockExpectations } from './expectations';
 
 export * from './range';
-export { TsMockError } from './error';
+export { OmniMockError } from './error';
 export { 
     UnknownRecording, 
     RecordedType, 
@@ -36,7 +36,7 @@ export const plugin = {
 export function mockObjectNotSupported(pluginName: string): never {
     throw new Error(`Failed to load expectation setters on this mock object. Possible causes are:
 - The object you are trying to mock was not obtained from the 'mock()' function.
-- The plugin '${pluginName}' is not compatible with this version of tsmock.`)
+- The plugin '${pluginName}' is not compatible with this version of omnimock.`)
 }
 
 export interface ExpectationSetter<T extends UnknownRecording> { };

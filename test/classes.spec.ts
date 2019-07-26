@@ -3,16 +3,6 @@ import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {
 
-    it('preserves instanceof property', () => {
-        const catMock = mock(new CatClass('Olinka'));
-        const containerMock = mock(new Container());
-
-        expect(instance(catMock)).toBeInstanceOf(CatClass);
-        expect(instance(catMock)).toBeInstanceOf(Container);
-        expect(instance(containerMock)).toBeInstanceOf(Container);
-        expect(instance(containerMock)).not.toBeInstanceOf(CatClass);
-    });
-
     it('can create a virtual mock', () => {
         const catMock = mock<CatClass>();
         expect(instance(catMock)).not.toBeInstanceOf(CatClass);
