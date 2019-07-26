@@ -44,6 +44,21 @@ export function mock<T extends AnyFunction | object>(toMock: string | T | undefi
 }
 
 /**
+ * Shorthand for `instance(mock<T>())`.
+ * 
+ * Useful when you need an object but you don't expect it to be used.
+ */
+export function mockInstance<T>(name?: string, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends AnyFunction | object>(backing: T | undefined, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends AnyFunction | object>(backingOrName: string | T | undefined, config?: (m: Mock<T>) => void): T {
+    const builder = mock(backingOrName as T);
+    if (config) {
+        config(builder);
+    }
+    return instance(builder);
+}
+
+/**
  * Wrap a call or a member access on a mock to set expectations.
  * 
  * @example

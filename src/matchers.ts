@@ -1,5 +1,5 @@
 import { WithMetadata, getMetadata, setMetadata, hasMetadata } from './metadata';
-import { AnyFunction } from './base-types';
+import { AnyFunction, ConstructorType } from './base-types';
 
 interface MatcherMetadata {
     /** Returns true if actual matches this matcher, or an error message otherwise */
@@ -19,12 +19,9 @@ export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string
     return [strings[0], ...values.map((value, i) => formatObjectForHumans(value) + strings[i + 1])].join('');
 }
 
-function formatObjectForHumans(obj: unknown): string {
+function substitute(_key: string, obj: unknown): unknown {
     if (isMatcher(obj)) {
         return `<${getMetadata(obj, 'matcher').name}>`;
-    }
-    if (typeof obj === 'string') {
-        return `"${obj}"`;
     }
     if (typeof obj === 'object' && obj != null) {
         const ctrName = obj.constructor.name;
@@ -32,7 +29,15 @@ function formatObjectForHumans(obj: unknown): string {
             return ctrName;
         }
     }
-    return JSON.stringify(obj);
+    if (typeof obj === 'function') {
+        // This may be one of our mocks
+        return `function ${obj.constructor.name}`;
+    }
+    return obj;
+}
+
+function formatObjectForHumans(obj: unknown): string {
+    return JSON.stringify(substitute('root', obj), substitute);
 }
 
 
@@ -71,6 +76,8 @@ export function equals<T extends Comparable>(ref: T): Matcher<T> {
 export function weakEquals<T extends Comparable>(ref: T): Matcher<T> {
     return matching((candidate) => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
 }
+export function between(min: number | { value: number, exclusive: true }, max: number | { value: number, exclusive: true }): Matcher<number>;
+export function between(min: string | { value: string, exclusive: true }, max: string | { value: string, exclusive: true }): Matcher<string>;
 export function between<T extends Comparable>(min: T | { value: T, exclusive: true }, max: T | { value: T, exclusive: true }): Matcher<T> {
     const [ minValue, includeMin ] = (typeof min === 'object' && 'exclusive' in min) ? [ min.value, !min.exclusive] : [ min, true ];
     const [ maxValue, includeMax ] = (typeof max === 'object' && 'exclusive' in max) ? [ max.value, !max.exclusive] : [ max, true ];
@@ -184,11 +191,28 @@ export function jsonEq<T>(expected: T): Matcher<T> {
     }, fmt`jsonEq(${expected})`));
 }
 
+export function anyOf<T>(...args: T[]): Matcher<T> {
+    const formattedArgs = args.map(a => fmt`${a}`).join(',');
+    return matching((actual) => {
+        return args.reduce<string | true>((prev, curr) => prev === true || match(curr, actual), fmt`${actual}` + `did not match any of ${formattedArgs}`);
+    }, `anyOf(${formattedArgs})`);
+}
+
+export function allOf<T>(...args: T[]): Matcher<T> {
+    const formattedArgs = args.map(a => fmt`${a}`).join(',');
+    return matching((actual) => {
+        return args.reduce<string | true>((prev, curr) => prev !== true ? prev : match(curr, actual), true);
+    }, `allOf(${formattedArgs})`);
+}
+
+export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
+    return matching((actual) => actual instanceof ctr || fmt`${actual} is not an instance of ${ctr}`, fmt`instanceOf(${ctr})`)
+}
 
 export function match(expected: unknown, actual: unknown): true | string {
     if (isMatcher(expected)) {
         return getMetadata(expected, 'matcher').match(actual);
-    } else if (typeof expected === 'object') {
+    } else if (typeof expected === 'object' || typeof expected === 'function') {
 
         if (expected == null) {
             return actual === expected || fmt`expected ${actual} to be ${expected}.`; // null or undefined

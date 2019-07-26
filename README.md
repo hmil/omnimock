@@ -68,6 +68,12 @@ const testClass = new TestClass(someService);
 
 `instance()` always returns a reference to the same object. The expectations you set on the mock always affect the instance, even after you've obtained a reference to it.
 
+If you do not need to set expectations on the mock, you can use `mockInstance` as a shorthand for `instance(mock())`.
+
+```ts
+when(someServiceMock.doStuff('some-id')).return(mockInstance('mock-return-value')).once();
+```
+
 ### <a name="virtual-mock"></a> Virtual mocks
 
 You can mock any object type or interface without providing an actual instance of it. This is called a _virtual_ mock because it doesn't retain any type information at runtime.  

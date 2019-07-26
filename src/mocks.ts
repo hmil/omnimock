@@ -60,7 +60,7 @@ function instanceProxyHandlerFactory(
             return result.result;
         },
 
-        ownKeys (_target) {
+        ownKeys(_target): PropertyKey[] {
             return Reflect.ownKeys(getOriginalTarget() as object).filter((k) => k !== METADATA_KEY);
         },
 
@@ -175,25 +175,20 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
 
     const stub = maybeStub == null ? createVirtualMockStub<ChainableMock<T> & GetterRecording>(params.mockPath) as any : maybeStub;
 
-    // Becomes true once the expectation has materialized;
-    let hasMaterialized = false;
 
     function materializeChain() {
-        if (!hasMaterialized) {
-            hasMaterialized = true;
-            params.expectations.addExpectation(
-                params.args,
-                (runtime) => {
-                    // const stub = createFunctionWithName('chain');
-                    return new Proxy(stub as object, instanceProxyHandlerFactory(
-                            runtime.getOriginalTarget,
-                            runtime.getOriginalContext,
-                            params.originalConstructor,
-                            expectedMemberAccess,
-                            expectedCalls));
-                });
-            params.materializeChain();
-        }
+        params.expectations.addExpectation(
+            params.args,
+            (runtime) => {
+                // const stub = createFunctionWithName('chain');
+                return new Proxy(stub as object, instanceProxyHandlerFactory(
+                        runtime.getOriginalTarget,
+                        runtime.getOriginalContext,
+                        params.originalConstructor,
+                        expectedMemberAccess,
+                        expectedCalls));
+            });
+        params.materializeChain();
     }
 
     function createExpectations(path: string): MockExpectations<unknown[] | undefined, unknown> {
@@ -249,15 +244,20 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
             }
 
             // For property access, you want to store the already produced mocks 
-            return mockCache.getOrElse(prop, () => mockNext({
-                recordingType: 'getter',
-                expectations: getOrCreateExpectations(prop),
-                materializeChain: materializeChain,
-                originalConstructor: Object,
-                mockPath: params.mockPath + humanReadableObjectPropertyAccess(prop),
-                registry: params.registry,
-                args: undefined
-            }));
+            return mockCache.getOrElse(prop, () => {
+                if (!(prop in stub)) {
+                    stub[prop] = undefined; // make sure the key is enumerable on the stub
+                }
+                return mockNext({
+                    recordingType: 'getter',
+                    expectations: getOrCreateExpectations(prop),
+                    materializeChain: materializeChain,
+                    originalConstructor: Object,
+                    mockPath: params.mockPath + humanReadableObjectPropertyAccess(prop),
+                    registry: params.registry,
+                    args: undefined
+                });
+            });
         }
     };
 
