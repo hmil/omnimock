@@ -22,12 +22,118 @@ OmniMock uses a principled approach to solve these goals in a rational way. We b
   That being said, one likes a nice API. That is why OmniMock offers powerful utilities such as automatic chaining for deeply nested properties, a single entry point to generate any kind of mock, wether it's a class instance, interface, function or object.
   Helpers like `.resolve` and `.reject` help you reduce the boilerplate without losing any type safety.
 
+# Introduction
+
+## Why use a mocking library?
+
+Unit tests need to be isolated. In order to achieve this, many guides show basic examples of what we can call "manual mocking".
+
+```ts
+const fakeCard: MtgCard = {
+    cost: 'UW',
+    color: 'white',
+    kind: 'sorcery',
+    art: 'John Avon',
+    play: () => ({}  as any),
+    burry: () => ({}  as any),
+    // ...
+}
+
+const gameState: MtgState = {
+    player1: {
+        getManaPool() {
+            return [ { color: 'W', qty: 1 } ];
+        },
+        // ...
+    },
+    player2: {
+        getManaPool() {
+            return [ ]; // Not important
+        },
+        // ...
+    },
+    clock: {
+        player: 1,
+        phase: 'precombat main'
+    }
+}
+
+const result = battlefield.castSpell(gameState, fakeCard);
+
+expect(result.type).toBe('illegal move');
+expect(result.reason).toBe('not enough mana');
+```
+
+The setup of the mocks is huge, it is hard to maintain, contains a lot of useless data, and juggles with types. IDE features like symbol lookup and renaming don't work in test code. The fake data may become inconsistent with the expected type and unit tests exercise situations which were already ruled out by the type system.  
+Developpers are incentivised to rely on actual implementations of the dependencies rather than mocks. This can quickly pile up to a mountain of tech debt and deter anyone from attempting any kind of refactoring on the main codebase.
+
+Enters a mocking library.
+
+The main feature a mocking library brings to the table is **automatic mocks**. What these allow you to do is focus on what is relevant to your specific test case, and ignore all of the rest. All of this while increasing type safety across your entire test suite.
+
+Going back to the example above, we know that the `battlefield` class will only need the card's mana cost, player 1's mana reserve and the clock data. We can rewrite the test like this.
+
+```ts
+const fakeCard = mock<MtgCard>('fake card');
+when(fakeCard.cost).useValue('UW');
+
+const gameState = mock<MtgState>('game state');
+when(gameState.clock).useValue({
+    player: 1,
+    phase: 'precombat main'
+});
+when(gameState.player1.getManaPool()).return([ { color: 'W', qty: 1 } ]);
+
+
+const result = battlefield.castSpell(gameState, fakeCard);
+
+expect(result.type).toBe('illegal move');
+expect(result.reason).toBe('not enough mana');
+```
+
+You may argument that the above can easily be achieved by creating a manual mock of `Partial<MtgCard>` and `Partial<MtgState>`, and only populating the relevant field. Effectively, this would be very similar to what we just did above. However, there are two problems with this approach:
+
+1. You will have to force a cast from `Partial<T>` to `T`. This is TypeScript telling you that you are doing something wrong...
+2. ...The wrong thing being: your production code is not equipped to deal with undefined values from your `Partial`. If it turns out the code uses some of the properties you thought it did not use, then it is possible that the undefined value will trickle down your system and cause an Error far from the original place the culprit value came from.
+
+**By contrast, if you forget to mock something, or if you make some changes to the code of `battlefield`, then OmniMock might throw an error like this: `Error: Unexpected call to <fake card>.play()`, with a stacktrace pointing to the exact location where the unexpected call occurred.**
+
+## Quick peek
+
+This is what a test using OmniMock could look like:
+
+```ts
+import { instance, mock, verify, when } from 'omnimock';
+
+// Definitions
+interface CatType {
+    greet(name: string): string;
+}
+const myService = {
+    doSomethingWithACat(cat: CatType) {
+        return `cat says: ${cat.greet('John')}`;
+    }
+}
+
+// Setup
+const mockCat = mock<CatType>();
+when(mockCat.greet('John')).return('Hello John');
+
+// Test execution
+const result = myService.doSomethingWithACat(instance(mockCat));
+
+// Verification
+verify(mockCat);
+expect(result).toEqual('cat says: Hello John');
+```
+
 # Features
 
 - [Creating a mock](#types-of-mock)
   - [Virtual mocks](#virtual-mock)
   - [Backed mocks](#backed-mock)
   - [Function mocks](#function-mock)
+  - [Inline mocks](#inline-mock)
 - [Matching](#matching)
   - [Method or function call](#expect-function-call)
   - [Member access](#expect-member-access)
@@ -44,11 +150,10 @@ OmniMock uses a principled approach to solve these goals in a rational way. We b
   - [Quantifiers](#quantifiers)
   - [Fail on unrealized expectation](#verify)
   - [Fail on unexpected call or access](#unexpected-call)
-- Misc
-  - Error messages & debugging
-  - Resetting expectations
-  - Capturing values
-  - Mocking static methods of a class
+- [Misc](#misc)
+  - [Debugging](#debugging)
+  - [Resetting a mock](#resetting)
+  - [Capturing values](#capture)
 
 
 
@@ -69,10 +174,6 @@ const testClass = new TestClass(someService);
 `instance()` always returns a reference to the same object. The expectations you set on the mock always affect the instance, even after you've obtained a reference to it.
 
 If you do not need to set expectations on the mock, you can use `mockInstance` as a shorthand for `instance(mock())`.
-
-```ts
-when(someServiceMock.doStuff('some-id')).return(mockInstance('mock-return-value')).once();
-```
 
 ### <a name="virtual-mock"></a> Virtual mocks
 
@@ -110,6 +211,59 @@ const luckyNumberMock = mock<(name: string) => number>(); // No-name virtual moc
 const luckyNumberMock = mock<(name: string) => number>('luckyNumber'); // Named virtual mock
 const luckyNumberMock = mock((name: string) => name.charCodeAt(0)); // Backed mock
 ```
+
+### <a name="inline-mock"></a> Inline mocks
+
+Take the following code.
+
+```ts
+const mockCard: MtgCard = {
+    id: 1038,
+    cost: 'UW',
+    color: 'white',
+    kind: 'sorcery',
+    art: 'John Avon',
+    // ...
+};
+
+when(codex.getCard('Starlight'))
+        .return(mockCard);
+```
+
+Specifying all members of the card can be tedious, especially if the tested class does not actually use the card. You could write the following to make your test more succint without losing type safety.
+
+```ts
+const mockCard = instance(mock<MtgCard>('fake card'));
+when(codex.getCard('Starlight'))
+        .return(mockCard);
+```
+
+In fact, this pattern is so common that we created a shortcut for it: `mockInstance`.
+
+```ts
+when(codex.getCard('Starlight'))
+        .return(mockInstance('fake card'));
+```
+
+The mock returned from `mockInstance` has no behavior attached to it and therefore it will throw an error when used.  
+
+You can provide a callback to attach some behavior to your mock.
+
+```ts
+when(codex.getCard('Starlight'))
+        .return(mockInstance('fake card', (fakeCard) => {
+            when(fakeCard.id).useValue(1038);
+        }));
+```
+
+The above is perfectly type-safe. The type of fakeCard is infered by TypeScript.  
+Note that you also have the alternative of using deep chaining. The above is roughly equivalent to the following.
+
+```ts
+when(codex.getCard('Starlight').id).useValue(1038);
+```
+
+Depending on the exact situation, either one may be more appropriate than the other.
 
 ## <a name="matching"></a> Matching
 
@@ -308,26 +462,51 @@ Any call which does not match any expectation will throw an Error.
 instance(myMock).find('bears'); // Error: Unexpected call to myMock.find('bears')
 ```
 
-## Misc
-TODO
+## <a name="misc"></a> Misc
 
-### Error logging
-TODO
+### <a name="debugging"></a> Debugging
 
-### Resetting expectations
-TODO
+OmniMock prints helpful error messages when something goes wrong to help you quickly identify the error.
+But there may be times when your mock got really complex and you don't understand why some call was not matched the way you wanted.  
+For those times we made the `debug` utility. Use it to print all of the expectations currently registered on a mock:
 
-### Debugging a mock
-TODO
+```ts
+import {  debug } from 'omnimock';
 
-## Techniques
-TODO
+console.log(debug(myMock));
+```
 
-### Capturing values
-TODO
+### <a name="resetting"></a> Resetting expectations
 
-### Mocking static methods of a class
-TODO
+Reset all expectations set on a mock using the `reset` function.
+
+```ts
+import { reset } from 'omnimock';
+
+when(myMock.getName()).return('apollo');
+reset(myMock);
+
+instance(myMock).getName(); // Error: Unexpected call to getName()
+```
+
+### <a name="capture"></a> Capturing values
+
+You can record a value passed to a mock from the tested code in order to use it in the test suite.
+
+To do so, use a fake call and save the value to the closure of the test.
+
+```ts
+let captured: string = '';
+
+when(myMock.getContact(anyString())).call((contact) => {
+    captured = contact;
+    return mockInstance();
+});
+
+instance(myMock).getContact('Mom');
+
+expect(captured).toBe('Mom');
+```
 
 # <a name="advanced-topics"></a> Advanced topics
 

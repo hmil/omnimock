@@ -1,4 +1,4 @@
-import { CatClass, Container } from './fixtures/classes';
+import { CatClass } from './fixtures/classes';
 import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {

@@ -3,7 +3,8 @@ import { getMetadata, METADATA_KEY, setMetadata, WithMetadata } from './metadata
 import { GetterRecording, Recording, RecordingMetadata, RecordingType } from './recording';
 import { MockExpectations, ExpectationsRegistry } from './expectations';
 import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
-import { Matcher, match, jsonEq } from './matchers';
+import { match, jsonEq } from './matchers';
+import { Matcher } from './matcher';
 
 export const MOCK_METADATA_KEY = 'mock';
 export type MOCK_METADATA_KEY = typeof MOCK_METADATA_KEY;
@@ -311,6 +312,7 @@ export function verifyMock(mock: Mock<any>): void {
 }
 
 export function resetMock(mock: Mock<any>): void {
+    // TODO: Also clear the internal state of the expectation setter
     getMetadata(mock, 'mock').expectationsRegistry.reset();
 }
 
