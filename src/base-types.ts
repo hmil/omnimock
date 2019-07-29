@@ -3,6 +3,10 @@ export type NotAConstructorType<T, Default> = T extends ConstructorType<any> ? D
 export type FnType<Args extends any[], Ret> = (...args: Args) => Ret;
 export type AnyFunction = FnType<any[], any>;
 
+export interface Indexable {
+    [k: string]: unknown;
+};
+
 /**
  * Adds all properties of twig onto stem and returns stem.
  */

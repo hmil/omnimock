@@ -146,7 +146,7 @@ Arguments are matched by deep-comparison by default. Use `same()` to compare by 
 
 #### <a name="matchers-list"></a> List of matchers
 
-The full [list of matchers](TODO) is available in the docs. Otherwise, you can [create your own matchers](TODO).
+The full [list of matchers](https://github.com/hmil/omnimock/blob/master/MATCHERS.md) is available in the docs. Otherwise, you can [create your own matchers](https://github.com/hmil/omnimock/blob/master/MATCHERS.md#custom-matcher).
 
 ### <a name="automatic-chaining"></a> Deeply nested properties (aka. _automatic chaining_)
 
@@ -342,15 +342,16 @@ The mock control exposes some metadata which public APIs like `when()` and `inst
 ## <a name="backed-vs-virtual"></a> Backed mocks vs virtual mocks
 
 As stated in the previous section, all mocks in OmniMock are ES6 Proxies. A mock captures any incoming call or property access and applies some logic to determine what to do next.  
-If the proxy has access to an actual instance of the type it is mocking, we say that this proxy is **backed** (as in, it has a **backing instance**). The proxy will inherit some properties of the backing instance whereas all virtual proxies behave identically.  
+If the proxy has access to an actual instance of the type it is mocking, we say that this proxy is **backed** (as in, it has a **backing instance**). The proxy will inherit some properties of the backing instance. Virtual proxies on the other hand behave in a more generic way.  
 The table below summarizes the differences between a backed mock and a virtual mock.
 
 | Property                   | Virtual    | Backed          |
 |----------------------------|------------|-----------------|
 | constructor (instanceof)   |      ✗     |        ✓        |
-| enumerate original props   |      ✗     |        ✓        |
+| enumerate original props   |      ✗(1)  |        ✓        |
 | callable                   | always yes | same as backing |
 
+_(1): Properties which have an expectation set are enumerable._
 
 ## Limitations
 
@@ -360,12 +361,4 @@ The table below summarizes the differences between a backed mock and a virtual m
 
 # Similar libraries
 
-- [safe-mock](https://www.npmjs.com/package/safe-mock) : _Looks very similar to OmniMock, haven't tried it yet._
-- [substitute](https://www.npmjs.com/package/@fluffy-spoon/substitute) :  _The API is awkward. The fact that you set expectations on the same object you pass to the tested code plays poorly with TypeScript._
-- [ts-mockito](https://www.npmjs.com/package/ts-mockito) : _Does not allow mocking property access, some gaps in type checking_
-- [ts-mockery](https://www.npmjs.com/package/ts-mockery) : _Not evaluated_
-- [ts-mock-imports](https://www.npmjs.com/package/ts-mock-imports) : _Not evaluated. Seems to focus on patching imported modules._
-- [ts-auto-mock](https://www.npmjs.com/package/ts-auto-mock) : _Not evaluated._
-- [ts-mocks](https://www.npmjs.com/package/ts-mocks) : _Specific to Jasmine. Not Evaluated_
-- [strong-mock](https://www.npmjs.com/package/strong-mock) : _Not evaluated. States some limitations on getter and call forwarding_
-- [typemoq](https://www.npmjs.com/package/typemoq) : _Not evaluated._
+Because there are many ways to design a mocking library, there are many mocking libraries. [This page](https://github.com/hmil/omnimock/wiki/Comparison-of-TypeScript-mocking-frameworks/) describes the differences between some popular choices.
