@@ -1,4 +1,4 @@
-# OmniMock - Mocks for TypeScript
+# OmniMock - Mocks for TypeScript [![Build Status](https://travis-ci.org/hmil/omnimock.svg?branch=master)](https://travis-ci.org/hmil/omnimock) [![npm version](https://badge.fury.io/js/omnimock.svg)](https://badge.fury.io/js/omnimock)
 
 OmniMock is a test mock library for TypeScript, with a focus on strong typing and ease of use.
 
