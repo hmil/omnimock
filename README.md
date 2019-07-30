@@ -319,11 +319,12 @@ when(myMock.members.getByName('Steve').job.getCompany().name).useActual();
 Be careful when mocking deeply nested properties. The matcher resolution works its way from left to right and never backtracks. This means that you need to look at the chain segment by segment, the first expectation that matches a segment wins immediately, even before the rest of the chain is evaluated.
 
 ```ts
-// These expectations are combined naturally
 when(myMock.members.getByName('Steve').job.getCompany().name).useValue('Pixar');
 when(myMock.members.getByName(anyString()).job.getCompany().address).useValue('1200 Park Ave');
-// Throws an error because, even though the second expectation alone would match,
-// the first expectation won at 'getByName' and it does not expect an access to 'address'.
+
+// Throws an error because, the first expectation won at 'getByName' 
+// and it does not expect an access to 'address'.
+// If you removed the first line, then this would return '1200 Park Ave'
 instance(myMock).members.getByName('Steve').job.getCompany().address 
 ```
 
@@ -527,10 +528,10 @@ The table below summarizes the differences between a backed mock and a virtual m
 | Property                   | Virtual    | Backed          |
 |----------------------------|------------|-----------------|
 | constructor (instanceof)   |      ✗     |        ✓        |
-| enumerate original props   |      ✗(1)  |        ✓        |
+| enumerate original props   |✗<sup>1</sup>|       ✓        |
 | callable                   | always yes | same as backing |
 
-_(1): Properties which have an expectation set are enumerable._
+<sup>1</sup>Only those properties which have been `when`-ed are enumerable. There is no way to retrieve the original properties at runtime.
 
 ## Limitations
 

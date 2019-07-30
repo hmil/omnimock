@@ -1,0 +1,16 @@
+language: node_js
+node_js:
+- lts/*
+- node
+script:
+- npm run test
+- npm run build
+deploy:
+  provider: npm
+  email: hadrien.milano@gmail.com
+  api_key:
+    secure: 1yS49Q5em/6iTVzZHJCvexEQZJShkHR+e6ko2bPuE7McQ380vNhvuOGaimnjzXd6VlmSU8GMKlT1jW//27BAykLCL226o01oAUVjsp83gMLZGMdyy73+SdU/NktM6cgGMbojvZBJvn+1rESpOtZcSZclbByWbrwJsAV4aU6LhBzbnJhZFQHW7SnGDW6Vg6mSM0YZnGlZX8emJ1icqDogjEDHGHKvdRBTigTstDu1JeBshvnh5zye5JftpCP5xzLU5ToWM+eizLMrAa1vvNHjfw3hA3p7QW+r/ItYHJm77tcSZdV464meREZtjeJyPZsSvmLTX5Di2g20kG4MMCf1ykv535wRSCNULIcFwY+PB3hjscaEV0kUZ4btbqte2RVjdH+dNYfYxM1iBylcoESULuiu0irVsfTtQjNhtWAN4WK+uPJ8C8f/UcxGNv/eJbrIwV4tb0ZiRNz4IbrqYcBpSpXOeE8s5y/6H19sGW+ZRJchRSW6rV/OxX2FvZ6x6KmLwpfaiFVY7E9BPqtJsqwdxCXd53OUtMPW8lJDITKygLiBe7rvguZFeoIkh6oc44F5IIGniAISUAFTu9B/BL06FN07naH5pIzajhYqAVgG9Ht5zVIezSRAYISawAydMnqged51Iugz4AJCntZNTDeNDAx3Um2ufJm7nPGby++ekE0=
+  on:
+    tags: true
+    repo: hmil/omnimock
+  skip_cleanup: true
