@@ -9,10 +9,17 @@ import { getMetadata, setMetadata } from './metadata';
 // ===================================
 
 /**
+ * Determines whether a candidate matches some criterion.
+ * 
+ * Returns true if `candidate` matches the criterion,
+ * otherwise returns a string explaining why it did not match.
+ */
+export type MatchingLogic<T> = (candidate: T) => true | string;
+
+/**
  * Creates a generic matcher.
  * 
- * @param match The comparison function. Returns true if the candidate matches, otherwise returns a string describing
- *              why the candidate did not match.
+ * @param match The matching logic.
  * @param name Name of this matcher.
  * 
  * @example
@@ -26,7 +33,7 @@ import { getMetadata, setMetadata } from './metadata';
  * ```
  */
 // tslint:disable-next-line: no-shadowed-variable
-export function matching<T>(match: (candidate: T) => true | string, name: string): Matcher<T> {
+export function matching<T>(match: MatchingLogic<T>, name: string): Matcher<T> {
     return setMetadata({} as Matcher<T>, MATCHER_KEY, { match, name });
 }
 
@@ -346,14 +353,14 @@ function keySetDifference(to: string[], from: string[]): { add: string[], remove
                 return {add, remove}; // Done
             }
             return {
-                remove,
-                add: remove.concat(from.slice(i)) // There are unmatched elements remaining in to
+                add,
+                remove: remove.concat(from.slice(i)) // There are unmatched elements remaining in `from`
             };
         }
         if (j >= from.length) {
             return {
-                add,
-                remove: remove.concat(from.slice(i)) // Some keys are missing in `to`
+                add: add.concat(to.slice(i)), // Some keys are missing in `from`
+                remove
             };
         }
         if (to[i] < from[j]) {
@@ -385,8 +392,8 @@ export function match(expected: unknown, actual: unknown): true | string {
         return getMetadata(expected, MATCHER_KEY).match(actual);
     } else if (typeof expected === 'object' || typeof expected === 'function') {
 
-        if (expected == null) {
-            return actual === expected || fmt`expected ${actual} to be ${expected}.`; // null or undefined
+        if (expected == null) { // null or undefined
+            return actual === expected || fmt`expected ${actual} to be ${expected}.`;
         }
 
         if (expected instanceof Array) {

@@ -26,22 +26,18 @@ match(weakEquals(0), ''); // match
 
 ## anything
 
-Matches any argument, including omitted arguments.
+Matches any argument, but not omitted arguments.
 
 ```ts
 const mockAnything  = mock<(n?: number): string>();
-const mockAnyNumber = mock<(n?: number): string>();
 
 when(mockAnything(anything())).return('OK');
-when(mockAnyNumber(anyNumber())).return('OK');
 
 instance(mockAnything)(123); // 'OK'
-instance(mockAnything)();    // 'OK'
-instance(mockAnyNumber)(123); // 'OK'
-instance(mockAnyNumber)();    // Error
+instance(mockAnything)();    // Error
 ```
 
-## instanceof
+## instanceOf
 
 Matches an object which is an `instanceof` the expected type.
 
@@ -148,6 +144,24 @@ Matches an object by performing a recursive match against each member.
 The set of members of the expected object must be the same as those of the actual object.
 
 
+```ts
+const myMock = mock<(arg: object) => string>();
+const test = instance(myMock);
+
+when(myMock(objectEq({
+    name: 'Ola',
+    age: between(30, 40)
+}))).return('OK');
+
+test({ name: 'Ola', age: 20 }));                 // Error
+test({ name: 'Ola' }));                          // Error
+test({ name: 'Ola', age: 35, job: 'teacher' })); // Error
+test({ name: 'Ola', job: 'teacher' }));          // Error
+test({ name: 'Ola', age: 20 }));                 // Error
+test({ name: 'Ola', age: 35 }));                 // OK
+```
+
+
 # <a name="custom-matcher"></a> Custom matcher
 
 Use the function `matching` to create a custom matcher when you cannot find a built-in matcher that suits your needs.  
@@ -172,8 +186,8 @@ function withScore(expected: number) {
         'with score');
 }
 
-match(withScore(12), { score: 10 } )    // 'Expected score to be 12 but was 10'
-match(withScore(12), 12)                // true
+match(withScore(12), { score: 10 })    // 'Expected score to be 12 but was 10'
+match(withScore(12), { score: 12 })    // true
 ```
 
 If you think your matcher could be useful to other people too, please consider opening a PR to add it to the built-in matchers.
