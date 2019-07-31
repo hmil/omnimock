@@ -1,10 +1,19 @@
 /*
  * Top-level API
  */
-import { AnyFunction } from './base-types';
+import { AnyFunction, ConstructorType } from './base-types';
 import { OmniMockError } from './error';
 import { GetMetadata, hasMetadata } from './metadata';
-import { createBackedMock, createVirtualMock, debugMock, getMockInstance, Mock, resetMock, verifyMock } from './mocks';
+import {
+    createBackedMock,
+    createClassOrFunctionMock,
+    createVirtualMock,
+    debugMock,
+    getMockInstance,
+    Mock,
+    resetMock,
+    verifyMock,
+} from './mocks';
 import { createExpectationSetter, ExpectationSetter } from './plugin-api';
 import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording';
 
@@ -32,6 +41,7 @@ import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording
  * ```
  */
 export function mock<T>(name?: string): Mock<T>;
+export function mock<T>(ctr: ConstructorType<T>): Mock<T>;
 export function mock<T extends AnyFunction | object>(backing: T): Mock<T>;
 export function mock<T extends AnyFunction | object>(toMock: string | T | undefined): Mock<T> {
     if (toMock === undefined) {
@@ -39,6 +49,9 @@ export function mock<T extends AnyFunction | object>(toMock: string | T | undefi
     }
     if (typeof toMock === 'string') {
         return createVirtualMock(toMock);
+    }
+    if (typeof toMock === 'function') {
+        return createClassOrFunctionMock(toMock as AnyFunction);
     }
     return createBackedMock(toMock);
 }

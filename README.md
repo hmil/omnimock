@@ -74,10 +74,10 @@ The main feature a mocking library brings to the table is **automatic mocks**. W
 Going back to the example above, we know that the `battlefield` class will only need the card's mana cost, player 1's mana reserve and the clock data. We can rewrite the test like this.
 
 ```ts
-const fakeCard = mock<MtgCard>('fake card');
+const fakeCard = mock(MtgCard);
 when(fakeCard.cost).useValue('UW');
 
-const gameState = mock<MtgState>('game state');
+const gameState = mock(MtgState);
 when(gameState.clock).useValue({
     player: 1,
     phase: 'precombat main'
@@ -96,7 +96,7 @@ You may argument that the above can easily be achieved by creating a manual mock
 1. You will have to force a cast from `Partial<T>` to `T`. This is TypeScript telling you that you are doing something wrong...
 2. ...The wrong thing being: your production code is not equipped to deal with undefined values from your `Partial`. If it turns out the code uses some of the properties you thought it did not use, then it is possible that the undefined value will trickle down your system and cause an Error far from the original place the culprit value came from.
 
-**By contrast, if you forget to mock something, or if you make some changes to the code of `battlefield`, then OmniMock might throw an error like this: `Error: Unexpected call to <fake card>.play()`, with a stacktrace pointing to the exact location where the unexpected call occurred.**
+**By contrast, if you forget to mock something, or if you make some changes to the code of `battlefield`, then OmniMock might throw an error like this: `Error: Unexpected call to MtgCard.play()`, with a stacktrace pointing to the exact location where the unexpected call occurred.**
 
 ## Quick peek
 
@@ -163,7 +163,7 @@ Use the `mock()` method to create a mock. Set expectations on the object returne
 
 ```ts
 // Use the mock to set expectations
-const someServiceMock = mock<SomeService>();
+const someServiceMock = mock(SomeService);
 when(someServiceMock.doStuff()).return('hi').once();
 
 // Pass the instance to the class you are testing
@@ -181,9 +181,11 @@ You can mock any object type or interface without providing an actual instance o
 Virtual mocks have some limitations. [Learn more here](#backed-vs-virtual).
 
 ```ts
-// Mock a class or interface
+// Mock a class by passing its constructor to the mock function.
+const mockAssemblyService = mock(AssemblyService);
+// Mock an interface by passing it as a type argument to the mock function.
 const mockAssemblyService = mock<AssemblyService>();
-// Giving your mock a name is optional and helps print more meaningful error messages
+// Use this form to give interface mocks a name, or to customize the name of a class mock.
 const mockAssemblyService = mock<AssemblyService>('mockAssemblyService');
 ```
 
@@ -207,12 +209,19 @@ const assemblyServiceMock = mock(new AssemblyService());
 You can also mock simple functions, both as a virtual or a backed mock.
 
 ```ts
-const luckyNumberMock = mock<(name: string) => number>(); // No-name virtual mock
-const luckyNumberMock = mock<(name: string) => number>('luckyNumber'); // Named virtual mock
-const luckyNumberMock = mock((name: string) => name.charCodeAt(0)); // Backed mock
+// No-name virtual mock
+const luckyNumberMock = mock<(name: string) => number>();
+// Named virtual mock
+const luckyNumberMock = mock<(name: string) => number>('luckyNumber');
+// Backed mock (using a named function helps print better error messages)
+const luckyNumberMock = mock(function luckyNumber(name: string) {
+    return name.charCodeAt(0);
+});
 ```
 
 ### <a name="inline-mock"></a> Inline mocks
+
+Inline mocks allow you to create a backed or virtual mock on the spot, with a more compact syntax. This can be helpful in some situations.
 
 Take the following code.
 
@@ -256,14 +265,13 @@ when(codex.getCard('Starlight'))
         }));
 ```
 
-The above is perfectly type-safe. The type of fakeCard is infered by TypeScript.  
-Note that you also have the alternative of using deep chaining. The above is roughly equivalent to the following.
+Note that you also have the alternative of using [deep chaining](#automatic-chaining). The above is roughly equivalent to the following.
 
 ```ts
 when(codex.getCard('Starlight').id).useValue(1038);
 ```
 
-Depending on the exact situation, either one may be more appropriate than the other.
+Depending on the exact situation, either one may be more appropriate.
 
 ## <a name="matching"></a> Matching
 

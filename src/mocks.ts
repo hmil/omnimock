@@ -13,7 +13,7 @@ export type MOCK_METADATA_KEY = typeof MOCK_METADATA_KEY;
  * Creates a class with a dynamic name.
  */
 function createClassWithName<T>(name: string) {
-    return { [name]: class {} }[name] as ConstructorType<T>;
+    return { [name]: class { } }[name] as ConstructorType<T>;
 }
 
 const FILTERED_PROPS = Object.getOwnPropertyNames(Object.prototype);
@@ -26,11 +26,11 @@ function instanceProxyHandlerFactory(
         expectedCalls: MockExpectations<unknown[] | undefined, unknown>
 ): ProxyHandler<any> {
     return {
-        getPrototypeOf(target: any) {
-            if (originalConstructor != null) {
+        getPrototypeOf(target: AnyFunction) {
+            if (originalConstructor != null && originalConstructor.prototype != null) {
                 return originalConstructor.prototype;
             } else {
-                return target.getPrototypeOf();
+                return Reflect.getPrototypeOf(target);
             }
         },
 
@@ -316,6 +316,12 @@ export function debugMock(mock: Mock<any>): string {
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
     const toMock = createClassWithName<T>(`<${name}>`);
     return mockFirst<T>(toMock as T, toMock as any as AnyFunction);
+}
+
+export function createClassOrFunctionMock<T extends object>(ctrOrFn: ConstructorType<T> | AnyFunction): Mock<T> {
+    // When `mock` is invoked with a function, either the user is trying to create a virtual mock of a class
+    // or he's trying to create a backed mock of a function.
+    return mockFirst<T>(ctrOrFn as T, ctrOrFn as AnyFunction);
 }
 
 export function createBackedMock<T extends object | AnyFunction>(toMock: T): Mock<T> {

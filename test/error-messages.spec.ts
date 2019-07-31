@@ -14,4 +14,21 @@ describe('error messages', () => {
 
         expect(() => instance(catMock).purr()).toThrow(/<virtual cat>.purr/);
     });
+
+    it('uses the original name of a function', () => {
+
+        function myAwesomeFunction() {
+            // noop
+        }
+
+        const m = mock(myAwesomeFunction);
+
+        expect(() => instance(m)()).toThrow(/myAwesomeFunction\(\)/);
+    });
+
+    it('uses the original name of a class', () => {
+        const catMock = mock(CatClass);
+
+        expect(() => instance(catMock).purr()).toThrow(/CatClass.purr/);
+    });
 });
