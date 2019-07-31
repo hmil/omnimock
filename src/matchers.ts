@@ -1,8 +1,7 @@
-import { Matcher, MATCHER_KEY, isMatcher } from './matcher';
 import { AnyFunction, ConstructorType, Indexable } from './base-types';
-import { setMetadata, getMetadata } from './metadata';
 import { fmt } from './formatting';
-
+import { isMatcher, Matcher, MATCHER_KEY } from './matcher';
+import { getMetadata, setMetadata } from './metadata';
 
 
 // ===================================
@@ -26,6 +25,7 @@ import { fmt } from './formatting';
  * match(theAnswer, 42) // true
  * ```
  */
+// tslint:disable-next-line: no-shadowed-variable
 export function matching<T>(match: (candidate: T) => true | string, name: string): Matcher<T> {
     return setMetadata({} as Matcher<T>, MATCHER_KEY, { match, name });
 }
@@ -34,14 +34,17 @@ export function matching<T>(match: (candidate: T) => true | string, name: string
  * Matches variables by strict equality (===)
  */
 export function same<T>(expected: T): Matcher<T> {
-    return matching((actual) => actual === expected || fmt`expected ${actual} to be the same instance as ${expected}`, fmt`same(${expected})`);
+    return matching(
+            actual => actual === expected || fmt`expected ${actual} to be the same instance as ${expected}`,
+            fmt`same(${expected})`);
 }
 
 /**
  * Matches variables by weak equality (==)
  */
 export function weakEquals<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
+    // tslint:disable-next-line: triple-equals
+    return matching(candidate => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
 }
 
 /**
@@ -55,7 +58,9 @@ export function anything(): Matcher<any> {
  * Matches an object which is an `instanceof` the expected type.
  */
 export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
-    return matching((actual) => actual instanceof ctr || fmt`${actual} is not an instance of ${ctr}`, fmt`instanceOf(${ctr})`)
+    return matching(
+            actual => actual instanceof ctr || fmt`${actual} is not an instance of ${ctr}`,
+            fmt`instanceOf(${ctr})`);
 }
 
 // ===================================
@@ -63,7 +68,9 @@ export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
 // ===================================
 
 function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): Matcher<T> {
-    return matching((actual) => predicate(actual) || `expected ${type} but got ${typeof actual}`, `any ${type}`);
+    return matching(
+            actual => predicate(actual) || `expected ${type} but got ${typeof actual}`,
+            `any ${type}`);
 }
 
 /**
@@ -126,8 +133,10 @@ export function anyArray(): Matcher<any[]> {
  */
 export function anyOf<T>(...args: T[]): Matcher<T> {
     const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return matching((actual) => {
-        return args.reduce<string | true>((prev, curr) => prev === true || match(curr, actual), fmt`${actual}` + `did not match any of ${formattedArgs}`);
+    return matching(actual => {
+        return args.reduce<string | true>(
+                (prev, curr) => prev === true || match(curr, actual),
+                fmt`${actual}` + `did not match any of ${formattedArgs}`);
     }, `anyOf(${formattedArgs})`);
 }
 
@@ -137,8 +146,10 @@ export function anyOf<T>(...args: T[]): Matcher<T> {
  */
 export function allOf<T>(...args: T[]): Matcher<T> {
     const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return matching((actual) => {
-        return args.reduce<string | true>((prev, curr) => prev !== true ? prev : match(curr, actual), true);
+    return matching(actual => {
+        return args.reduce<string | true>(
+                (prev, curr) => prev !== true ? prev : match(curr, actual),
+                true);
     }, `allOf(${formattedArgs})`);
 }
 
@@ -153,54 +164,74 @@ type Comparable = string | number;
  * Matches any variable strictly greater than the provided reference.
  */
 export function greaterThan<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate > ref) || `${candidate} is no greater than ${ref}`, `greater than ${ref}`);
+    return matching(candidate =>
+            (candidate > ref) || `${candidate} is no greater than ${ref}`,
+            `greater than ${ref}`);
 }
 
 /**
  * Matches any variable strictly smaller than the provided reference.
  */
 export function smallerThan<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate < ref) || `${candidate} is no smaller than ${ref}`, `smaller than ${ref}`);
+    return matching(
+            candidate => (candidate < ref) || `${candidate} is no smaller than ${ref}`,
+            `smaller than ${ref}`);
 }
 
 /**
  * Matches any variable greater than or equal to the provided reference.
  */
 export function greaterThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate >= ref) || `${candidate} is no greater than nor equals ${ref}`, `greater than or equal to ${ref}`);
+    return matching(
+            candidate => (candidate >= ref) || `${candidate} is no greater than nor equals ${ref}`,
+            `greater than or equal to ${ref}`);
 }
 
 /**
  * Matches any variable smaller than or equal to the provided reference.
  */
 export function smallerThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate <= ref) || `${candidate} is no smaller than nor equals ${ref}`, `smaller than or equal to ${ref}`);
+    return matching(
+            candidate => (candidate <= ref) || `${candidate} is no smaller than nor equals ${ref}`,
+            `smaller than or equal to ${ref}`);
 }
 
 /**
  * Matches any variable strictly equal to the provided reference.
  */
 export function equals<T extends Comparable>(ref: T): Matcher<T> {
-    return matching((candidate) => (candidate === ref) || `${candidate} is not strictly equal to ${ref}`, `=== ${ref}`);
+    return matching(
+            candidate => (candidate === ref) || `${candidate} is not strictly equal to ${ref}`,
+            `=== ${ref}`);
 }
+
+type RangeBound<T extends Comparable> = T | {
+    value: T;
+    exclusive: boolean;
+};
 
 /**
  * Matches any variable between min and max.
  * 
- * Both min and max are inclusive in the range by default, but can be made exclusive by passing `exclusive: true` as shown below.
+ * Both min and max are inclusive in the range by default, but can be made exclusive 
+ * by passing `exclusive: true` as shown below.
  * 
  * ```ts
  * between(0, { value: 10, exclusive: true })
  * ``` 
  */
-export function between(min: number | { value: number, exclusive: true }, max: number | { value: number, exclusive: true }): Matcher<number>;
-export function between(min: string | { value: string, exclusive: true }, max: string | { value: string, exclusive: true }): Matcher<string>;
-export function between<T extends Comparable>(min: T | { value: T, exclusive: true }, max: T | { value: T, exclusive: true }): Matcher<T> {
-    const [ minValue, includeMin ] = (typeof min === 'object' && 'exclusive' in min) ? [ min.value, !min.exclusive] : [ min, true ];
-    const [ maxValue, includeMax ] = (typeof max === 'object' && 'exclusive' in max) ? [ max.value, !max.exclusive] : [ max, true ];
+export function between(min: RangeBound<number>, max: RangeBound<number>): Matcher<number>;
+export function between(min: RangeBound<string>, max: RangeBound<string>): Matcher<string>;
+export function between<T extends Comparable>(min: RangeBound<T>, max: RangeBound<T>): Matcher<T> {
+    const [ minValue, includeMin ] = (typeof min === 'object' && 'exclusive' in min) ?
+            [ min.value, !min.exclusive] :
+            [ min, true ];
+    const [ maxValue, includeMax ] = (typeof max === 'object' && 'exclusive' in max) ?
+            [ max.value, !max.exclusive] :
+            [ max, true ];
     const rangeText = `${includeMin ? '[' : ']'}${minValue} ; ${maxValue}${includeMax ? ']' : '['}`;
 
-    return matching((candidate) => (
+    return matching(candidate => (
         (candidate > minValue || includeMin && candidate === minValue) &&
         (candidate < maxValue || includeMax && candidate === maxValue)
     ) || `${candidate} is not in range ${rangeText}`, `range ${rangeText}`);
@@ -215,7 +246,7 @@ export function between<T extends Comparable>(min: T | { value: T, exclusive: tr
  * Matches an object whose JSON representation is the same as that of the expected.
  */
 export function jsonEq<T>(expected: T): Matcher<T> {
-    return Object.assign({}, expected, matching((actual) => {
+    return Object.assign({}, expected, matching(actual => {
         const serializedExpected = JSON.stringify(expected);
         const serializedActual = JSON.stringify(actual);
 
@@ -229,7 +260,7 @@ export function jsonEq<T>(expected: T): Matcher<T> {
  * The expected array can contain nested matchers.
  */
 export function arrayEq<T extends any[]>(expected: T): Matcher<T> {
-    return Object.assign(expected.slice() as T, matching((actual) => {
+    return Object.assign(expected.slice() as T, matching(actual => {
         if (!(actual instanceof Array)) {
             return fmt`expected array type but got ${actual}`;
         }
@@ -261,7 +292,7 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
     const expectedKeys = Object.keys(expected).sort();
 
-    return Object.assign({}, expected, matching((actual) => {
+    return Object.assign({}, expected, matching(actual => {
         if (typeof actual !== 'object') {
             return fmt`expected variable of type object but was ${typeof actual}`;
         }

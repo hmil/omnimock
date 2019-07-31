@@ -1,25 +1,19 @@
 import { AnyFunction, ConstructorType, FnType } from './base-types';
+import { ExpectationsRegistry, MockExpectations } from './expectations';
+import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
+import { Matcher } from './matcher';
+import { jsonEq, match } from './matchers';
 import { getMetadata, METADATA_KEY, setMetadata, WithMetadata } from './metadata';
 import { GetterRecording, Recording, RecordingMetadata, RecordingType } from './recording';
-import { MockExpectations, ExpectationsRegistry } from './expectations';
-import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
-import { match, jsonEq } from './matchers';
-import { Matcher } from './matcher';
 
 export const MOCK_METADATA_KEY = 'mock';
 export type MOCK_METADATA_KEY = typeof MOCK_METADATA_KEY;
 
-export function instantiate<T extends ConstructorType<any>>(klass: T, params: ConstructorParameters<T>): InstanceType<T> {
-    class Ctr extends klass {
-    }
-    return new Ctr(...params);
-}
-
 /**
- * Creates a function with a dynamic name.
+ * Creates a class with a dynamic name.
  */
-function createFunctionWithName(name: string) {
-    return { [name](){} }[name];
+function createClassWithName<T>(name: string) {
+    return { [name]: class {} }[name] as ConstructorType<T>;
 }
 
 const FILTERED_PROPS = Object.getOwnPropertyNames(Object.prototype);
@@ -27,7 +21,7 @@ const FILTERED_PROPS = Object.getOwnPropertyNames(Object.prototype);
 function instanceProxyHandlerFactory(
         getOriginalTarget: () => unknown,
         getOriginalContext: () => object | undefined,
-        originalConstructor: Function | undefined,
+        originalConstructor: AnyFunction | undefined,
         expectedMemberAccess: Map<string, MockExpectations<unknown[] | undefined, unknown>>,
         expectedCalls: MockExpectations<unknown[] | undefined, unknown>
 ): ProxyHandler<any> {
@@ -62,17 +56,17 @@ function instanceProxyHandlerFactory(
         },
 
         ownKeys(_target): PropertyKey[] {
-            return Reflect.ownKeys(getOriginalTarget() as object).filter((k) => k !== METADATA_KEY);
+            return Reflect.ownKeys(getOriginalTarget() as object).filter(k => k !== METADATA_KEY);
         },
 
-        getOwnPropertyDescriptor: function(target, prop): PropertyDescriptor | undefined {
+        getOwnPropertyDescriptor(target, prop): PropertyDescriptor | undefined {
             if (prop === METADATA_KEY) {
                 return {
                     configurable: false,
                     enumerable: false,
                     value: null,
                     writable: false,
-                }
+                };
             }
             return Reflect.getOwnPropertyDescriptor(target, prop);
         },
@@ -112,8 +106,8 @@ function instanceProxyHandlerFactory(
 }
 
 export interface MockMetadata<T> {
+    expectationsRegistry: ExpectationsRegistry;
     getInstance(): T;
-    expectationsRegistry: ExpectationsRegistry
 }
 
 type ChainableMock<T> = MethodMock<T> & ObjectMock<T>;
@@ -129,7 +123,8 @@ type ObjectMock<T> = {
 export type Mock<T> = WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>> & ObjectMock<T> & MethodMock<T>;
 
 function createVirtualMockStub<T>(name: string): T {
-    return createFunctionWithName(`${name}; If you are seeing this then most likely you passed someMock directly instead of instance(someMock)`) as any;
+    return createClassWithName<T>(
+            `${name}; If you are seeing this then most likely you forgot to use instance()`) as any;
 }
 
 interface MockParams {
@@ -151,7 +146,7 @@ interface MockParams {
     /**
      * Constructor of the original object.
      */
-    originalConstructor: Function;
+    originalConstructor: AnyFunction;
 
     /**
      * Human readable JavaScript-like object notation representing where the current mock can be found
@@ -174,21 +169,19 @@ interface MockParams {
  */
 function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & GetterRecording {
 
-    const stub = maybeStub == null ? createVirtualMockStub<ChainableMock<T> & GetterRecording>(params.mockPath) as any : maybeStub;
-
+    const stub = maybeStub == null ?
+            createVirtualMockStub<ChainableMock<T> & GetterRecording>(params.mockPath) as any :
+            maybeStub;
 
     function materializeChain() {
-        params.expectations.addExpectation(
-            params.args,
-            (runtime) => {
-                // const stub = createFunctionWithName('chain');
-                return new Proxy(stub as object, instanceProxyHandlerFactory(
-                        runtime.getOriginalTarget,
-                        runtime.getOriginalContext,
-                        params.originalConstructor,
-                        expectedMemberAccess,
-                        expectedCalls));
-            });
+        params.expectations.addExpectation(params.args, runtime => {
+            return new Proxy(stub as object, instanceProxyHandlerFactory(
+                    runtime.getOriginalTarget,
+                    runtime.getOriginalContext,
+                    params.originalConstructor,
+                    expectedMemberAccess,
+                    expectedCalls));
+        });
         params.materializeChain();
     }
 
@@ -210,7 +203,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
         expectations = createExpectations(params.mockPath + humanReadableObjectPropertyAccess(prop));
         expectedMemberAccess.set(prop, expectations);
         return expectations;
-    };
+    }
 
     const recordingMetadata: RecordingMetadata<RecordingType, unknown[] | undefined, unknown> = {
         expectations: params.expectations,
@@ -229,11 +222,12 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
             return mockCache.getOrElse(args, () => mockNext({
                 recordingType: 'call',
                 expectations: expectedCalls,
-                materializeChain: materializeChain,
-                originalConstructor: target.constructor, // "target" can only be a function here so it must have a constructor
+                materializeChain,
+                // "target" can only be a function here so it must have a constructor
+                originalConstructor: target.constructor as AnyFunction,
                 mockPath: params.mockPath + `(${formatArgArray(argArray)})`, // TODO: Factor out params formatting
                 registry: params.registry,
-                args: args
+                args
             }));
         },
         get(target: ChainableMock<T>, prop: PropertyKey, receiver: unknown): Map<string, any> | ChainableMock<unknown> {
@@ -252,7 +246,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                 return mockNext({
                     recordingType: 'getter',
                     expectations: getOrCreateExpectations(prop),
-                    materializeChain: materializeChain,
+                    materializeChain,
                     originalConstructor: Object,
                     mockPath: params.mockPath + humanReadableObjectPropertyAccess(prop),
                     registry: params.registry,
@@ -265,7 +259,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
     return new Proxy(stub, handler);
 }
 
-function mockFirst<T extends object>(backingInstance: T, originalConstructor: Function): Mock<T> {
+function mockFirst<T extends object>(backingInstance: T, originalConstructor: AnyFunction): Mock<T> {
 
     const registry = new ExpectationsRegistry();
 
@@ -284,16 +278,15 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: Fu
         },
         expectationsRegistry: registry
     };
-    // const stub = createVirtualMockStub<ChainableMock<T> & GetterRecording & WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>>>('root');
     setMetadata(backingInstance as WithMetadata<'mock', MockMetadata<T>>, 'mock', mockMetadata);
 
     const firstMock = mockNext<T>({
         recordingType: 'call',
         expectations: new MockExpectations(originalConstructor.name),
-        materializeChain: () => {},
+        materializeChain: () => { /* noop */ },
         originalConstructor,
         mockPath: originalConstructor.name,
-        registry: registry,
+        registry,
         args: []
     }, backingInstance);
 
@@ -321,12 +314,12 @@ export function debugMock(mock: Mock<any>): string {
 }
 
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
-    const toMock = createFunctionWithName(name) as T;
-    return mockFirst(toMock, toMock.constructor);
+    const toMock = createClassWithName<T>(`<${name}>`);
+    return mockFirst<T>(toMock as T, toMock as any as AnyFunction);
 }
 
 export function createBackedMock<T extends object | AnyFunction>(toMock: T): Mock<T> {
-    return mockFirst(toMock, toMock.constructor);
+    return mockFirst(toMock, toMock.constructor as AnyFunction);
 }
 
 

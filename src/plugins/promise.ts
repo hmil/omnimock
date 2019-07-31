@@ -1,5 +1,5 @@
 import { OmniMockError, suppressCompileTimeError } from '../error';
-import { plugin, UnknownRecording, RecordedType, ExpectationSetter } from '../plugin-api';
+import { ExpectationSetter, plugin, RecordedType, UnknownRecording } from '../plugin-api';
 
 interface PromiseExpectations<T extends UnknownRecording> {
     /**
@@ -7,16 +7,16 @@ interface PromiseExpectations<T extends UnknownRecording> {
      */
     resolve: RecordedType<T> extends Promise<infer PType> ?
             (t: PType) => ExpectationSetter<UnknownRecording> :
-            OmniMockError<"This method does not return a promise, you cannot use 'resolve()' here.">;
+            OmniMockError<'This method does not return a promise, you cannot use \'resolve()\' here.'>;
     /**
      * Rejects the promise with the reason provided.
      */
     reject: RecordedType<T> extends Promise<unknown> ?
             (t: any) => ExpectationSetter<UnknownRecording> :
-            OmniMockError<"This method does not return a promise, you cannot use 'reject()' here.">;
+            OmniMockError<'This method does not return a promise, you cannot use \'reject()\' here.'>;
 }
 
-declare module "../plugin-api" {
+declare module '../plugin-api' {
     interface ExpectationSetter<T extends UnknownRecording> extends PromiseExpectations<T> { }
 }
 
@@ -30,5 +30,5 @@ plugin.registerExpectations((api): PromiseExpectations<UnknownRecording> => {
             api.answer(() => Promise.reject(value));
             return api.chain();
         })
-    }
+    };
 });

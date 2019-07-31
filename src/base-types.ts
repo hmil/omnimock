@@ -5,7 +5,7 @@ export type AnyFunction = FnType<any[], any>;
 
 export interface Indexable {
     [k: string]: unknown;
-};
+}
 
 /**
  * Adds all properties of twig onto stem and returns stem.

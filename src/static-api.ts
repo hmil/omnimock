@@ -3,10 +3,10 @@
  */
 import { AnyFunction } from './base-types';
 import { OmniMockError } from './error';
-import { Mock, getMockInstance, verifyMock, resetMock, debugMock, createVirtualMock, createBackedMock } from './mocks';
-import { Recording, UnknownRecording, RECORDING_METADATA_KEY } from './recording';
-import { hasMetadata, GetMetadata } from './metadata';
+import { GetMetadata, hasMetadata } from './metadata';
+import { createBackedMock, createVirtualMock, debugMock, getMockInstance, Mock, resetMock, verifyMock } from './mocks';
 import { createExpectationSetter, ExpectationSetter } from './plugin-api';
+import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording';
 
 
 /**
@@ -34,8 +34,8 @@ import { createExpectationSetter, ExpectationSetter } from './plugin-api';
 export function mock<T>(name?: string): Mock<T>;
 export function mock<T extends AnyFunction | object>(backing: T): Mock<T>;
 export function mock<T extends AnyFunction | object>(toMock: string | T | undefined): Mock<T> {
-    if (toMock == undefined) {
-        toMock = '<virtual mock>';
+    if (toMock === undefined) {
+        toMock = 'virtual mock';
     }
     if (typeof toMock === 'string') {
         return createVirtualMock(toMock);
@@ -50,7 +50,8 @@ export function mock<T extends AnyFunction | object>(toMock: string | T | undefi
  */
 export function mockInstance<T>(name?: string, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(backing: T | undefined, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends AnyFunction | object>(backingOrName: string | T | undefined, config?: (m: Mock<T>) => void): T {
+export function mockInstance<T extends AnyFunction | object>(
+        backingOrName: string | T | undefined, config?: (m: Mock<T>) => void): T {
     const builder = mock(backingOrName as T);
     if (config) {
         config(builder);
@@ -77,8 +78,12 @@ export function mockInstance<T extends AnyFunction | object>(backingOrName: stri
  * ```
  */
 export function when<T extends Recording<any>>(t: T): ExpectationSetter<T>;
-export function when(t: object): OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
-export function when<T extends Recording<any>>(t: object): ExpectationSetter<T> | OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
+export function when(t: object): 
+        OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'>;
+export function when<T extends Recording<any>>(t: object):
+        ExpectationSetter<T> |
+        OmniMockError<'`when` needs to be invoked on a mock. Did you forget to `mock()` your object?'> {
+
     if (!hasMetadata<RECORDING_METADATA_KEY, GetMetadata<RECORDING_METADATA_KEY, UnknownRecording>>(t, 'recording')) {
         throw new Error('`when` needs to be invoked on a mock. Did you forget to `mock()` your object?');
     }

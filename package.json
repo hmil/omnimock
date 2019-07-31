@@ -9,6 +9,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "build": "tsc -p .",
+    "lint": "tslint -p .",
     "test": "jest",
     "test:debug": "node --inspect node_modules/.bin/jest --watch --runInBand"
   },

@@ -1,9 +1,8 @@
 import { isMatcher, MATCHER_KEY } from './matcher';
 import { getMetadata } from './metadata';
 
-
 export function formatArgArray(args: unknown[] | undefined) {
-    return (args || []).map(a => fmt`${a}`).join(', ')
+    return (args || []).map(a => fmt`${a}`).join(', ');
 }
 
 const IDENTIFIER_RX = /^[$A-Z_][0-9A-Z_$]*$/i;

@@ -5,7 +5,7 @@
 export interface OmniMockError<T extends string> {
     __OMNIMOCK_ERROR__: {
         [k in T]: null;
-    }
+    };
 }
 
 export function suppressCompileTimeError<T>(t: T): T & OmniMockError<any> {

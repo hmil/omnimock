@@ -1,11 +1,11 @@
 import {
-    plugin,
-    UnknownRecording,
-    ExpectationSetter,
     AT_LEAST_ONCE,
     AT_MOST_ONCE,
+    ExpectationSetter,
     ONCE,
+    plugin,
     Range,
+    UnknownRecording,
     ZERO_OR_MORE
 } from '../plugin-api';
 
@@ -17,7 +17,7 @@ interface Quantifiers<T extends UnknownRecording> {
     anyTimes(): ExpectationSetter<T>;
 }
 
-declare module "../plugin-api" {
+declare module '../plugin-api' {
     interface ExpectationSetter<T extends UnknownRecording> extends Quantifiers<T> { }
 }
 

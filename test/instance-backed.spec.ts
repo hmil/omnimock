@@ -1,5 +1,5 @@
-import { mock, instance } from "../src";
-import { CatClass, Container } from "./fixtures/classes";
+import { instance, mock } from '../src';
+import { CatClass, Container } from './fixtures/classes';
 
 describe('Instance backed mocks', () => {
 
@@ -19,10 +19,10 @@ describe('Instance backed mocks', () => {
 
         const seenProperties = [];
         const expectedProperties = [];
-        for (const prop in instance(catMock)) {
+        for (const prop of Object.getOwnPropertyNames(instance(catMock))) {
             seenProperties.push(prop);
         }
-        for (const prop in original) {
+        for (const prop of Object.getOwnPropertyNames(original)) {
             expectedProperties.push(prop);
         }
 
@@ -35,10 +35,10 @@ describe('Instance backed mocks', () => {
 
         const seenProperties = [];
         const expectedProperties = [];
-        for (const prop in instance(catMock).constructor.prototype) {
+        for (const prop of Object.getOwnPropertyNames(instance(catMock).constructor.prototype)) {
             seenProperties.push(prop);
         }
-        for (const prop in CatClass.prototype) {
+        for (const prop of Object.getOwnPropertyNames(CatClass.prototype)) {
             expectedProperties.push(prop);
         }
 

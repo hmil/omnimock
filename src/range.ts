@@ -22,7 +22,7 @@ export class Range {
     }
 
     public hasFixedCount(): boolean {
-        return this.minimum == this.maximum;
+        return this.minimum === this.maximum;
     }
 
     public getMaximum(): number {
@@ -58,7 +58,7 @@ export class Range {
     }
 
     public hasOpenCount(): boolean {
-        return this.maximum == Number.MAX_SAFE_INTEGER;
+        return this.maximum === Number.MAX_SAFE_INTEGER;
     }
 }
 
