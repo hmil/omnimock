@@ -24,6 +24,7 @@ class MockExpectation<Args extends unknown[] | undefined, Ret> {
     private actualCalls: number = 0;
 
     constructor(
+            private readonly path: string,
             private readonly args: Args,
             public expectedCalls: Range,
             private readonly handler: ExpectationHandler<Args, Ret>) { }
@@ -35,13 +36,16 @@ class MockExpectation<Args extends unknown[] | undefined, Ret> {
     handle(context: RuntimeContext<Args, Ret>): Ret {
         this.actualCalls ++;
         if (this.expectedCalls.getMaximum() < this.actualCalls) {
-            throw new Error(`Unexpected call: TODO: better error message`);
+            throw new Error(`${this.path}${this.methodSignature()} was expected ${this.expectedCalls} ` +
+                    `but was received ${this.actualCalls} times.`);
         }
         return this.handler(context);
     }
 
     toString(): string {
-        return `${this.methodSignature()} : expected ${this.expectedCalls.toString()}, received ${this.actualCalls}`;
+        return `${this.path}${this.methodSignature()} : ` +
+                `expected ${this.expectedCalls.toString()}, ` +
+                `received ${this.actualCalls}`;
     }
 
     isSatisfied(): boolean {
@@ -66,7 +70,7 @@ export class MockExpectations<Args extends unknown[] | undefined, Ret> {
     }
 
     addExpectation(args: Args, handler: ExpectationHandler<Args, Ret>): void {
-        this.expectations.push(new MockExpectation(args, ZERO_OR_MORE, handler));
+        this.expectations.push(new MockExpectation(this.path, args, ZERO_OR_MORE, handler));
     }
 
     setLastExpectationRange(range: Range) {
@@ -93,7 +97,7 @@ export class MockExpectations<Args extends unknown[] | undefined, Ret> {
     }
 
     toString(): string {
-        return this.expectations.map(e => `${this.path}${e.toString()}`).join('\n');
+        return this.expectations.map(e => `${e.toString()}`).join('\n');
     }
 
     getAllUnsatisfied(): Array<MockExpectation<Args, Ret>> {
@@ -134,7 +138,7 @@ export class ExpectationsRegistry {
 
     verify(): void {
         const unsatisfied = this.allExpectations
-                .map(e => e.getAllUnsatisfied().map(expectation => e.path + expectation.toString()))
+                .map(e => e.getAllUnsatisfied().map(expectation => expectation.toString()))
                 .filter(e => e.length > 0)
                 .reduce((prev, curr) => prev.concat(curr), []);
         if (unsatisfied.length > 0) {

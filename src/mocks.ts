@@ -50,7 +50,7 @@ function instanceProxyHandlerFactory(
                 getOriginalTarget: getOriginal
             });
             if ('error' in result) {
-                throw new Error(`Unexpected method call: ${expectedCalls.path}(${formatArgArray(argArray)})`);
+                throw new Error(`Unexpected function call: ${expectedCalls.path}(${formatArgArray(argArray)})`);
             }
             return result.result;
         },
@@ -285,7 +285,7 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: An
         expectations: new MockExpectations(originalConstructor.name),
         materializeChain: () => { /* noop */ },
         originalConstructor,
-        mockPath: originalConstructor.name,
+        mockPath: `<${originalConstructor.name}>`,
         registry,
         args: []
     }, backingInstance);
@@ -314,7 +314,7 @@ export function debugMock(mock: Mock<any>): string {
 }
 
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
-    const toMock = createClassWithName<T>(`<${name}>`);
+    const toMock = createClassWithName<T>(name);
     return mockFirst<T>(toMock as T, toMock as any as AnyFunction);
 }
 
