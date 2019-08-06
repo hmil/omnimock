@@ -74,16 +74,18 @@ The main feature a mocking library brings to the table is **automatic mocks**. W
 Going back to the example above, we know that the `battlefield` class will only need the card's mana cost, player 1's mana reserve and the clock data. We can rewrite the test like this.
 
 ```ts
-const fakeCard = mock(MtgCard);
-when(fakeCard.cost).useValue('UW');
-
-const gameState = mock(MtgState);
-when(gameState.clock).useValue({
-    player: 1,
-    phase: 'precombat main'
+const fakeCard = mock<MtgCard>({
+    cost: 'UW'
 });
-when(gameState.player1.getManaPool()).return([ { color: 'W', qty: 1 } ]);
-
+const gameState = mock<MtgState>({
+    clock: {
+        player: 1,
+        phase: 'precombat main'
+    }
+});
+when(gameState.player1.getManaPool())
+    .return([ { color: 'W', qty: 1 } ])
+    .once();
 
 const result = battlefield.castSpell(gameState, fakeCard);
 

@@ -53,3 +53,13 @@ describe('JSON stringification', () => {
         expect(() => JSON.stringify(instance(catMock))).toThrow();
     });
 });
+
+describe('the mock instance', () => {
+    it('is always the same instance', () => {
+        const catMock = mock<CatClass>({
+            color: 'blue'
+        });
+        expect(instance(catMock) === instance(catMock)).toBe(true);
+        expect(instance(catMock)).toBe(instance(catMock));
+    });
+});

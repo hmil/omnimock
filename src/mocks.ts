@@ -194,14 +194,18 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
             maybeStub;
 
     function materializeChain() {
+        let lazyProxy: unknown; 
         params.expectations.addExpectation(params.args, runtime => {
-            return new Proxy(stub as object, instanceProxyHandlerFactory(
+            if (lazyProxy == null) {
+                lazyProxy = new Proxy(stub as object, instanceProxyHandlerFactory(
                     runtime.getOriginalTarget,
                     runtime.getOriginalContext,
                     params.originalConstructor,
                     expectedMemberAccess,
                     expectedCalls,
                     params.isVirtual));
+            }
+            return lazyProxy;
         });
         params.materializeChain();
     }
