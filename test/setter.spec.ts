@@ -25,7 +25,8 @@ describe('setter behavior', () => {
     it('setting the name property on a virtual mock fails due to implementation details', () => {
         const catMock = mock<CatClass>();
         // TODO: This contradicts the design philosophy of omnimock.
-        // Might need a separate entry point for mocking functions
+        // Might need a separate entry point for mocking functions.
+        // OR maybe we can get around this when we hook the set operation
         expect(() => instance(catMock).name = 'Olinka').toThrow();
         when(catMock.name).useActual();
         expect(instance(catMock).name).toBe('virtual mock');
