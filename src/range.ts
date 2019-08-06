@@ -16,8 +16,8 @@ export class Range {
         if (this.minimum < 0) {
             throw new Error('minimum must be >= 0');
         }
-        if (this.maximum < 1) {
-            throw new Error('maximum must be >= 1');
+        if (this.maximum < 0) {
+            throw new Error('maximum must be >= 0');
         }
     }
 
@@ -37,6 +37,9 @@ export class Range {
         if (this.hasFixedCount()) {
             if (this.minimum === 1) {
                 return 'once';
+            }
+            if (this.minimum === 0) {
+                return 'never';
             }
             return `${this.minimum} times`;
         } else if (this.hasOpenCount()) {
@@ -82,3 +85,8 @@ export const AT_MOST_ONCE = new Range(0, 1);
  * Zero or more calls.
  */
 export const ZERO_OR_MORE = new Range(0, Number.MAX_SAFE_INTEGER);
+
+/**
+ * Zero or more calls.
+ */
+export const NEVER = new Range(0, 0);

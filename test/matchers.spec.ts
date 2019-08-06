@@ -11,6 +11,7 @@ import {
     anything,
     arrayEq,
     between,
+    contains,
     equals,
     greaterThan,
     greaterThanOrEqual,
@@ -371,6 +372,36 @@ describe('argument matchers', () => {
             expect(() => instance(myMock)({ name: 'Ola', age: 20 })).toThrow(/Unexpected/);
             expect(() => instance(myMock)({ name: 'Ola', age: 45 })).toThrow(/Unexpected/);
             expect(instance(myMock)({ name: 'Ola', age: 35 })).toBe(true);
+        });
+    });
+
+    describe('objectContaining', () => {
+        it('rejects objects with different values', () => {
+            const myMock = mock<(arg: object) => boolean>();
+
+            when(myMock(contains({ name: 'Ola', job: 'teacher' }))).return(true);
+
+            expect(() => instance(myMock)({ name: 'Ola', job: ['teacher'] })).toThrow(/Unexpected/);
+            expect(() => instance(myMock)({ name: 'Ola', job: 'student' })).toThrow(/Unexpected/);
+            expect(() => instance(myMock)({ name: 'Ola', job: 12 })).toThrow(/Unexpected/);
+        });
+        it('accepts matching objects', () => {
+            const myMock = mock<(arg: object) => boolean>();
+
+            when(myMock(contains({ name: 'Ola', job: 'teacher' }))).return(true);
+
+            expect(instance(myMock)({ name: 'Ola', job: 'teacher' })).toBe(true);
+            expect(instance(myMock)({ name: 'Ola', job: 'teacher', age: 21 })).toBe(true);
+        });
+        it('combines with other matchers', () => {
+            const myMock = mock<(arg: object) => boolean>();
+
+            when(myMock(contains({ name: 'Ola', age: between(30, 40) }))).return(true);
+
+            expect(() => instance(myMock)({ name: 'Ola', age: 20 })).toThrow(/Unexpected/);
+            expect(() => instance(myMock)({ name: 'Ola', age: 45 })).toThrow(/Unexpected/);
+            expect(instance(myMock)({ name: 'Ola', age: 35 })).toBe(true);
+            expect(instance(myMock)({ name: 'Ola', age: 35, job: 'teacher' })).toBe(true);
         });
     });
 

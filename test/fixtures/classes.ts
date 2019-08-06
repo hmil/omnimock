@@ -12,7 +12,8 @@ export interface Tag {
     };
     manufacturer: {
         fetch(): Promise<string>;
-    }
+    };
+    siblings: Tag[];
 }
 
 export class CatClass extends Container {
@@ -23,7 +24,8 @@ export class CatClass extends Container {
         },
         manufacturer: {
             fetch: () => Promise.resolve('nokia')
-        }
+        },
+        siblings: []
     };
 
     public getTag(_tagNumber: number): Tag {
@@ -31,7 +33,7 @@ export class CatClass extends Container {
     }
     
     constructor(
-            public readonly name: string) {
+            public name: string) {
         super();
     }
 

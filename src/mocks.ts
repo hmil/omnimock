@@ -16,14 +16,15 @@ function createClassWithName<T>(name: string) {
     return { [name]: class { } }[name] as ConstructorType<T>;
 }
 
-const FILTERED_PROPS = Object.getOwnPropertyNames(Object.prototype);
+const FILTERED_PROPS = ['toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
 
 function instanceProxyHandlerFactory(
         getOriginalTarget: () => unknown,
         getOriginalContext: () => object | undefined,
         originalConstructor: AnyFunction | undefined,
         expectedMemberAccess: Map<string, MockExpectations<unknown[] | undefined, unknown>>,
-        expectedCalls: MockExpectations<unknown[] | undefined, unknown>
+        expectedCalls: MockExpectations<unknown[] | undefined, unknown>,
+        isVirtual: boolean
 ): ProxyHandler<any> {
     return {
         getPrototypeOf(target: AnyFunction) {
@@ -84,23 +85,37 @@ function instanceProxyHandlerFactory(
                 return originalConstructor;
             }
             if (typeof prop === 'string') {
-                if (FILTERED_PROPS.indexOf(prop) < 0) {
-                    const answer = expectedMemberAccess.get(prop);
-                    if (answer != null) {
-                        const result = answer.handle({
-                            args: undefined,
-                            context: target,
-                            getOriginalContext: getOriginalTarget as () => object,
-                            getOriginalTarget: getOriginal
-                        });
-                        if (!('error' in result)) {
-                            return result.result;
-                        }
+                const answer = expectedMemberAccess.get(prop);
+                if (answer != null) {
+                    const result = answer.handle({
+                        args: undefined,
+                        context: target,
+                        getOriginalContext: getOriginalTarget as () => object,
+                        getOriginalTarget: getOriginal
+                    });
+                    if (!('error' in result)) {
+                        return result.result;
                     }
-                    throw new Error(`Unexpected property access: ${expectedCalls.path}.${prop}`);
                 }
+
+                if (FILTERED_PROPS.indexOf(prop) >= 0) {
+                    return getOriginal();
+                }
+
+                // Backed mocks fall back to the backing instance if the property is available
+                // TODO: There must exist a bug here when users set a value on the instance because this code gets
+                // the property from originalTarget, whereas `set` is not intercepted and will therefore set the
+                // property on the current target.
+                if (!isVirtual) {
+                    const originalTarget = getOriginalTarget();
+                    if ((typeof originalTarget === 'object' && originalTarget != null ||
+                            typeof originalTarget === 'function')
+                            && Reflect.has(originalTarget, prop)) {
+                        return Reflect.get(originalTarget, prop, receiver);
+                    }
+                }
+                throw new Error(`Unexpected property access: ${expectedCalls.path}.${prop}`);
             }
-            return getOriginal(); 
         }
     };
 }
@@ -120,7 +135,7 @@ type ObjectMock<T> = {
                     Recording<RecordingMetadata<'getter', [], T[K]>>
 };
 
-export type Mock<T> = WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>> & ObjectMock<T> & MethodMock<T>;
+export type Mock<T> = WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>> & ChainableMock<T>;
 
 function createVirtualMockStub<T>(name: string): T {
     return createClassWithName<T>(
@@ -162,6 +177,11 @@ interface MockParams {
      * The arguments (or argument matchers) passed to this mocked call.
      */
     args: unknown[] | undefined;
+
+    /**
+     * When true, this entire mock chain is a virtual mock.
+     */
+    isVirtual: boolean;
 }
 
 /**
@@ -180,7 +200,8 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                     runtime.getOriginalContext,
                     params.originalConstructor,
                     expectedMemberAccess,
-                    expectedCalls));
+                    expectedCalls,
+                    params.isVirtual));
         });
         params.materializeChain();
     }
@@ -227,7 +248,8 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                 originalConstructor: target.constructor as AnyFunction,
                 mockPath: params.mockPath + `(${formatArgArray(argArray)})`, // TODO: Factor out params formatting
                 registry: params.registry,
-                args
+                args,
+                isVirtual: params.isVirtual
             }));
         },
         get(target: ChainableMock<T>, prop: PropertyKey, receiver: unknown): Map<string, any> | ChainableMock<unknown> {
@@ -250,7 +272,8 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                     originalConstructor: Object,
                     mockPath: params.mockPath + humanReadableObjectPropertyAccess(prop),
                     registry: params.registry,
-                    args: undefined
+                    args: undefined,
+                    isVirtual: params.isVirtual
                 });
             });
         }
@@ -259,7 +282,10 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
     return new Proxy(stub, handler);
 }
 
-function mockFirst<T extends object>(backingInstance: T, originalConstructor: AnyFunction): Mock<T> {
+function mockFirst<T extends object>(
+        backingInstance: Partial<T>,
+        originalConstructor: AnyFunction,
+        isVirtual: boolean): Mock<T> {
 
     const registry = new ExpectationsRegistry();
 
@@ -278,7 +304,7 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: An
         },
         expectationsRegistry: registry
     };
-    setMetadata(backingInstance as WithMetadata<'mock', MockMetadata<T>>, 'mock', mockMetadata);
+    setMetadata(backingInstance as any, 'mock', mockMetadata);
 
     const firstMock = mockNext<T>({
         recordingType: 'call',
@@ -287,7 +313,8 @@ function mockFirst<T extends object>(backingInstance: T, originalConstructor: An
         originalConstructor,
         mockPath: `<${originalConstructor.name}>`,
         registry,
-        args: []
+        args: [],
+        isVirtual
     }, backingInstance);
 
     const fmMetadata = getMetadata(firstMock, 'recording');
@@ -315,17 +342,20 @@ export function debugMock(mock: Mock<any>): string {
 
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
     const toMock = createClassWithName<T>(name);
-    return mockFirst<T>(toMock as T, toMock as any as AnyFunction);
+    return mockFirst<T>(toMock as T, toMock as any as AnyFunction, true);
 }
 
 export function createClassOrFunctionMock<T extends object>(ctrOrFn: ConstructorType<T> | AnyFunction): Mock<T> {
     // When `mock` is invoked with a function, either the user is trying to create a virtual mock of a class
     // or he's trying to create a backed mock of a function.
-    return mockFirst<T>(ctrOrFn as T, ctrOrFn as AnyFunction);
+
+    // FIXME: We set isVirtual to true, but really what we ought to do is use isVirtual: false and transition to
+    // isVirtual: true if the first-level access is a member access (cf. comment above)
+    return mockFirst<T>(ctrOrFn as T, ctrOrFn as AnyFunction, true);
 }
 
-export function createBackedMock<T extends object | AnyFunction>(toMock: T): Mock<T> {
-    return mockFirst(toMock, toMock.constructor as AnyFunction);
+export function createBackedMock<T extends object | AnyFunction>(toMock: Partial<T>): Mock<T> {
+    return mockFirst(toMock, toMock.constructor as AnyFunction, false);
 }
 
 

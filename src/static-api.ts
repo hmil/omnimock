@@ -42,8 +42,9 @@ import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording
  */
 export function mock<T>(name?: string): Mock<T>;
 export function mock<T>(ctr: ConstructorType<T>): Mock<T>;
-export function mock<T extends AnyFunction | object>(backing: T): Mock<T>;
-export function mock<T extends AnyFunction | object>(toMock: string | T | undefined): Mock<T> {
+export function mock<T extends AnyFunction>(backing: T): Mock<T>;
+export function mock<T extends object>(backing: Partial<T>): Mock<T>;
+export function mock<T extends AnyFunction | object>(toMock: string | Partial<T> | undefined): Mock<T> {
     if (toMock === undefined) {
         toMock = 'virtual mock';
     }
@@ -62,10 +63,11 @@ export function mock<T extends AnyFunction | object>(toMock: string | T | undefi
  * Useful when you need an object but you don't expect it to be used.
  */
 export function mockInstance<T>(name?: string, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends AnyFunction | object>(backing: T | undefined, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends AnyFunction>(backing: T, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends object>(backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(
-        backingOrName: string | T | undefined, config?: (m: Mock<T>) => void): T {
-    const builder = mock(backingOrName as T);
+        backingOrName: string | Partial<T> | undefined, config?: (m: Mock<T>) => void): T {
+    const builder = mock<T>((backingOrName || {}) as T);
     if (config) {
         config(builder);
     }

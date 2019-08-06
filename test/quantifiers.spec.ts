@@ -1,5 +1,5 @@
-import { CatClass } from "./fixtures/classes";
-import { mock, instance, when, verify } from "../src";
+import { instance, mock, verify, when } from '../src';
+import { CatClass } from './fixtures/classes';
 
 describe('Expectation quantifiers', () => {
 
@@ -15,7 +15,6 @@ describe('Expectation quantifiers', () => {
             expect(() => instance(catMock).purr()).not.toThrow();
             expect(() => verify(catMock)).not.toThrow();
         });
-
         it('asserts at least one member access', () => {
             const catMock = mock<CatClass>();
 
@@ -40,7 +39,6 @@ describe('Expectation quantifiers', () => {
             expect(() => verify(catMock)).not.toThrow();
             expect(() => instance(catMock).purr()).toThrow();
         });
-
         it('asserts at most one member access', () => {
             const catMock = mock<CatClass>();
 
@@ -57,14 +55,13 @@ describe('Expectation quantifiers', () => {
         it('asserts exactly one call', () => {
             const catMock = mock<CatClass>();
 
-            when(catMock.purr()).useValue('hoyhoy').once();
+            when(catMock.purr()).return('hoyhoy').once();
 
             expect(() => verify(catMock)).toThrow();
             expect(() => instance(catMock).purr()).not.toThrow();
             expect(() => verify(catMock)).not.toThrow();
             expect(() => instance(catMock).purr()).toThrow();
         });
-
         it('asserts exactly one member access', () => {
             const catMock = mock<CatClass>();
 
@@ -81,7 +78,7 @@ describe('Expectation quantifiers', () => {
         it('asserts an arbitrary number of calls', () => {
             const catMock = mock<CatClass>();
 
-            when(catMock.purr()).useValue('hoyhoy').times(2);
+            when(catMock.purr()).return('hoyhoy').times(2);
 
             expect(() => verify(catMock)).toThrow();
             expect(() => instance(catMock).purr()).not.toThrow();
@@ -90,7 +87,6 @@ describe('Expectation quantifiers', () => {
             expect(() => verify(catMock)).not.toThrow();
             expect(() => instance(catMock).purr()).toThrow();
         });
-
         it('asserts an arbitrary number of member accesses', () => {
             const catMock = mock<CatClass>();
 
@@ -103,5 +99,26 @@ describe('Expectation quantifiers', () => {
             expect(() => verify(catMock)).not.toThrow();
             expect(() => instance(catMock).color).toThrow();
         });
-    })
+    });
+
+    describe('.never()', () => {
+        it('asserts zero calls', () => {
+            const catMock = mock<CatClass>();
+
+            when(catMock.purr()).return('hoyhoy').never();
+
+            expect(() => verify(catMock)).not.toThrow();
+            expect(() => instance(catMock).purr()).toThrow();
+            expect(() => verify(catMock)).toThrow();
+        });
+        it('asserts zero member accesses', () => {
+            const catMock = mock<CatClass>();
+
+            when(catMock.color).useValue('hoyhoy').never();
+
+            expect(() => verify(catMock)).not.toThrow();
+            expect(() => instance(catMock).color).toThrow();
+            expect(() => verify(catMock)).toThrow();
+        });
+    });
 });

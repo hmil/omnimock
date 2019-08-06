@@ -157,7 +157,26 @@ test({ name: 'Ola', age: 20 }));                 // Error
 test({ name: 'Ola' }));                          // Error
 test({ name: 'Ola', age: 35, job: 'teacher' })); // Error
 test({ name: 'Ola', job: 'teacher' }));          // Error
+test({ name: 'Ola', age: 35 }));                 // OK
+```
+
+### contains
+
+Matches an object which contains members matching those of the reference.
+
+```ts
+const myMock = mock<(arg: object) => string>();
+const test = instance(myMock);
+
+when(myMock(contains({
+    name: 'Ola',
+    age: between(30, 40)
+}))).return('OK');
+
 test({ name: 'Ola', age: 20 }));                 // Error
+test({ name: 'Ola' }));                          // Error
+test({ name: 'Ola', age: 35, job: 'teacher' })); // OK
+test({ name: 'Ola', job: 'teacher' }));          // Error
 test({ name: 'Ola', age: 35 }));                 // OK
 ```
 

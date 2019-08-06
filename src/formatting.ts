@@ -17,21 +17,21 @@ export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string
     return [strings[0], ...values.map((value, i) => formatObjectForHumans(value) + strings[i + 1])].join('');
 }
 
-function substitute(_key: string, obj: unknown): unknown {
-    if (isMatcher(obj)) {
-        return `<${getMetadata(obj, MATCHER_KEY).name}>`;
+function substitute(_key: string, value: unknown): unknown {
+    if (isMatcher(value)) {
+        return `<${getMetadata(value, MATCHER_KEY).name}>`;
     }
-    if (typeof obj === 'object' && obj != null) {
-        const ctrName = obj.constructor.name;
+    if (typeof value === 'object' && value != null) {
+        const ctrName = value.constructor.name;
         if (ctrName && ctrName !== 'Object') {
             return ctrName;
         }
     }
-    if (typeof obj === 'function') {
+    if (typeof value === 'function') {
         // This may be one of our mocks
-        return `function ${obj.constructor.name}`;
+        return `function ${value.constructor.name}`;
     }
-    return obj;
+    return value;
 }
 
 function formatObjectForHumans(obj: unknown): string {

@@ -1,5 +1,5 @@
-import { CatClass } from "./fixtures/classes";
-import { mock, when, mockInstance, instance } from "../src";
+import { instance, mock, mockInstance, when } from '../src';
+import { CatClass } from './fixtures/classes';
 
 describe('mockInstance', () => {
 
@@ -29,5 +29,27 @@ describe('mockInstance', () => {
             when(tagMock.chip.id).useActual();
         }));
         expect(instance(catMock).tag.chip.id).toBe(123);
+    });
+});
+
+describe('JSON stringification', () => {
+    it('does not cause unexpected access on virtual mocks', () => {
+        const catMock = mock<CatClass>();
+        expect(() => JSON.stringify(instance(catMock))).not.toThrow();
+    });
+    it('does not cause unexpected access on backed mocks', () => {
+        const catMock = mock(new CatClass('Olinka'));
+        expect(() => JSON.stringify(instance(catMock))).not.toThrow();
+    });
+    it('does not cause unexpected access on partial mocks', () => {
+        const catMock = mock<CatClass>({
+            color: 'blue'
+        });
+        expect(() => JSON.stringify(instance(catMock))).not.toThrow();
+    });
+    it('can override expectations on toJSON', () => {
+        const catMock = mock<CatClass>();
+        when((catMock as any).toJSON).return(undefined).never();
+        expect(() => JSON.stringify(instance(catMock))).toThrow();
     });
 });

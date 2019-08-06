@@ -335,6 +335,28 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
 }
 
 /**
+ * Matches any object which contains at least members matching the reference's members.
+ */
+export function contains<T extends object>(expectedUnsafe: Partial<T>): Matcher<T> {
+    const expected = Object.assign({}, expectedUnsafe);
+    return matching(actual => {
+        const errors: string[] = [];
+        for (const key of Object.keys(expected)) {
+            const matched = match((expected as Indexable)[key], (actual as Indexable)[key]);
+            if (matched !== true) {
+                errors.push(`- [${key}]: ${indentMessage(matched)}`);
+            }
+        }
+
+        if (errors.length > 0) {
+            return `object mismatch:\n${errors.join('\n')}`;
+        }
+
+        return true;
+    }, fmt`objectContaining(${expected})`);
+}
+
+/**
  * Computes the key set difference to get from `from` to `to`.
  *
  * The diff consists in a set of keys to add and a set of keys to remove.

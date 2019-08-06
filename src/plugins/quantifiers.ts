@@ -2,11 +2,12 @@ import {
     AT_LEAST_ONCE,
     AT_MOST_ONCE,
     ExpectationSetter,
+    NEVER,
     ONCE,
     plugin,
     Range,
     UnknownRecording,
-    ZERO_OR_MORE
+    ZERO_OR_MORE,
 } from '../plugin-api';
 
 interface Quantifiers<T extends UnknownRecording> {
@@ -15,6 +16,7 @@ interface Quantifiers<T extends UnknownRecording> {
     atMostOnce(): ExpectationSetter<T>;
     once(): ExpectationSetter<T>;
     anyTimes(): ExpectationSetter<T>;
+    never(): ExpectationSetter<T>;
 }
 
 declare module '../plugin-api' {
@@ -41,6 +43,10 @@ plugin.registerExpectations((api): Quantifiers<UnknownRecording> => {
         },
         anyTimes() {
             api.expectations.setLastExpectationRange(ZERO_OR_MORE);
+            return api.chain();
+        },
+        never() {
+            api.expectations.setLastExpectationRange(NEVER);
             return api.chain();
         }
     };

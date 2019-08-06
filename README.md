@@ -132,6 +132,7 @@ expect(result).toEqual('cat says: Hello John');
 - [Creating a mock](#types-of-mock)
   - [Virtual mocks](#virtual-mock)
   - [Backed mocks](#backed-mock)
+    - [Partial mocks](#partial-mock)
   - [Function mocks](#function-mock)
   - [Inline mocks](#inline-mock)
 - [Matching](#matching)
@@ -203,6 +204,32 @@ const assemblyServiceMock = mock(realAssemblyService);
 // This works well with classes too
 const assemblyServiceMock = mock(new AssemblyService());
 ```
+
+By default, property access on a backed mock don't trigger an error (ie. they behave like .[useActual](#call-through)().[anyTimes](#quantifiers)()).  
+If you want to forbid some function call or property access, use a quantifier like this:
+
+```ts
+when(assemblyServiceMock.assemble).useActual().never();
+```
+
+#### <a name="partial-mock"></a> Partial mocks
+
+You can omit properties when you create a backed mock.
+
+```ts
+const assemblyServiceMock = mock<AssemblyService>({
+    version: 2
+});
+```
+
+A mock created this way will accept any get or set operation on the specified members, but will throw an error if one attempts to get an omitted property.
+
+```ts
+assemblyService.version; // 2
+assemblyService.assemble(parts, blueprint); // Error: unexpected property access: AssemblyService.assemble
+```
+
+This is useful to mock data types (ie. classes or types which contain raw data and almost no actual logic).
 
 ### <a name="function-mock"></a> Function mocks
 

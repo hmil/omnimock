@@ -1,4 +1,4 @@
-import { mock, instance, when, greaterThan, verify } from '../src';
+import { greaterThan, instance, mock, verify, when } from '../src';
 import { CatClass } from './fixtures/classes';
 
 describe('manual chaining', () => {
@@ -14,7 +14,7 @@ describe('manual chaining', () => {
         when(chipMock.id).useValue(123);
 
         expect(instance(catMock).tag.chip.id).toBe(123);
-    })
+    });
 });
 
 describe('automatic chaining', () => {
@@ -41,6 +41,14 @@ describe('automatic chaining', () => {
         const catMock = mock(new CatClass('tommy'));
         when(catMock.getTag(1).manufacturer.fetch()).callThrough();
         expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('nokia');
+    });
+
+    it('works with arrays', () => {
+        const catMock = mock(CatClass);
+        when(catMock.tag.siblings[2].chip.id).useValue(12);
+        when(catMock.tag.siblings[0].chip.id).useValue(432);
+        expect(instance(catMock).tag.siblings[2].chip.id).toBe(12);
+        expect(instance(catMock).tag.siblings[0].chip.id).toBe(432);
     });
 
     it('catches unexpected accesses', () => {
