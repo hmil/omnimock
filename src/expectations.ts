@@ -83,10 +83,6 @@ export class MockExpectations<Args extends unknown[] | undefined, Ret> {
         lastExpectation.expectedCalls = range;
     }
 
-    resetExpectations() {
-        this.expectations.length = 0;
-    }
-
     handle(context: RuntimeContext<Args, Ret>): ExpectationHandlingResult<Ret> {
         const matching = this.firstMatchingExpectation(context);
         if (matching == null) {

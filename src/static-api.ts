@@ -124,7 +124,9 @@ export function verify(t: Mock<unknown>): void {
 /**
  * Resets all expected calls on this mock.
  */
-export function reset(t: Mock<unknown>): void {
+export function reset(t: Mock<unknown>): void;
+export function reset<T extends Recording<any>>(t: T): void;
+export function reset(t: Recording<any> | Mock<unknown>): void {
     return resetMock(t);
 }
 

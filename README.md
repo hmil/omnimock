@@ -516,15 +516,24 @@ console.log(debug(myMock));
 
 ### <a name="resetting"></a> Resetting expectations
 
-Reset all expectations set on a mock using the `reset` function.
+Reset all or part of the expectations set on a mock using the `reset` function.
 
 ```ts
 import { reset } from 'omnimock';
 
 when(myMock.getName()).return('apollo');
+when(myMock.luckyNumber).useValue(23);
+// Reset all expectations set on this mock
 reset(myMock);
+instance(myMock).getName();     // Error: Unexpected access to getName
+instance(myMock).luckyNumber;   // Error: Unexpected access to getName
 
-instance(myMock).getName(); // Error: Unexpected call to getName()
+when(myMock.getName()).return('apollo');
+when(myMock.luckyNumber).useValue(23);
+// Reset only the getName member access and leave everything else
+reset(myMock.getName);
+instance(myMock).getName();     // Error: Unexpected access to getName
+instance(myMock).luckyNumber;   // 23
 ```
 
 ### <a name="capture"></a> Capturing values

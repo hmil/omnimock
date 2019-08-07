@@ -59,6 +59,7 @@ describe('the mock instance', () => {
         const catMock = mock<CatClass>({
             color: 'blue'
         });
+        // tslint:disable-next-line: no-identical-expressions
         expect(instance(catMock) === instance(catMock)).toBe(true);
         expect(instance(catMock)).toBe(instance(catMock));
     });

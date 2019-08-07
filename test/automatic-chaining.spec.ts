@@ -57,6 +57,7 @@ describe('automatic chaining', () => {
         // Actually assert the chip path
         when(catMock.tag.chip.id).useValue(123);
         // And use the manufacturer path but without any assertion
+        // tslint:disable-next-line: no-unused-expression
         catMock.tag.manufacturer.fetch;
 
         expect(() => instance(catMock).tag.manufacturer.fetch).toThrow(/Unexpected.+manufacturer/);

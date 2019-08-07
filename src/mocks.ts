@@ -3,8 +3,8 @@ import { ExpectationsRegistry, MockExpectations } from './expectations';
 import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
 import { Matcher } from './matcher';
 import { jsonEq, match } from './matchers';
-import { getMetadata, METADATA_KEY, setMetadata, WithMetadata } from './metadata';
-import { GetterRecording, Recording, RecordingMetadata, RecordingType } from './recording';
+import { GetMetadata, getMetadata, METADATA_KEY, setMetadata, WithMetadata } from './metadata';
+import { GetterRecording, Recording, RecordingMetadata, RecordingType, UnknownRecording } from './recording';
 
 export const MOCK_METADATA_KEY = 'mock';
 export type MOCK_METADATA_KEY = typeof MOCK_METADATA_KEY;
@@ -135,7 +135,7 @@ type ObjectMock<T> = {
                     Recording<RecordingMetadata<'getter', [], T[K]>>
 };
 
-export type Mock<T> = WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>> & ChainableMock<T>;
+export type Mock<T> = WithMetadata<MOCK_METADATA_KEY, MockMetadata<T>> & GetterRecording & ChainableMock<T>;
 
 function createVirtualMockStub<T>(name: string): T {
     return createClassWithName<T>(
@@ -187,11 +187,14 @@ interface MockParams {
 /**
  * Mocks the next member or function call in a chain.
  */
-function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & GetterRecording {
+function mockNext<T>(params: MockParams, maybeStub?: any, maybeMetadata?: WithMetadata<any, any>)
+        : ChainableMock<T> & GetterRecording {
 
     const stub = maybeStub == null ?
             createVirtualMockStub<ChainableMock<T> & GetterRecording>(params.mockPath) as any :
             maybeStub;
+    
+    const metadata: WithMetadata<any, any> = maybeMetadata == null ? { [METADATA_KEY]: { } } : maybeMetadata;
 
     function materializeChain() {
         let lazyProxy: unknown; 
@@ -235,11 +238,17 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
         args: params.args,
         ret: {} as any, // TODO
         type: params.recordingType,
+        reset: () => {
+            params.expectations.reset();
+            mockCache.clear();
+            expectedMemberAccess.clear();
+            expectedCalls.reset();
+        },
         // TODO: This is just a temporary hack to allow bootstrapping the chain. Figure out a cleaner way
         expect: (maybeStub != null) ? materializeChain : params.materializeChain
     };
 
-    setMetadata(stub, 'recording', recordingMetadata);
+    setMetadata(metadata, 'recording', recordingMetadata);
 
     const handler: ProxyHandler<ChainableMock<T> & GetterRecording> = {
         apply(target: ChainableMock<T>, _thisArg: ChainableMock<T>, argArray?: unknown[]): ChainableMock<unknown> {
@@ -261,7 +270,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                 return Reflect.get(target, prop, receiver);
             }
             if (prop === METADATA_KEY) {
-                return Reflect.get(stub, METADATA_KEY, receiver);
+                return Reflect.get(metadata, METADATA_KEY, receiver);
             }
 
             // For property access, you want to store the already produced mocks 
@@ -280,6 +289,15 @@ function mockNext<T>(params: MockParams, maybeStub?: any): ChainableMock<T> & Ge
                     isVirtual: params.isVirtual
                 });
             });
+        },
+        ownKeys(target): PropertyKey[] {
+            return [...Reflect.ownKeys(target), METADATA_KEY];
+        },
+        has(target, p) {
+            if (p === METADATA_KEY) {
+                return true;
+            }
+            return Reflect.has(target, p);
         }
     };
 
@@ -292,6 +310,7 @@ function mockFirst<T extends object>(
         isVirtual: boolean): Mock<T> {
 
     const registry = new ExpectationsRegistry();
+    const metadata = { [METADATA_KEY]: { } };
 
     const mockMetadata: MockMetadata<unknown> = {
         getInstance() {
@@ -308,20 +327,23 @@ function mockFirst<T extends object>(
         },
         expectationsRegistry: registry
     };
-    setMetadata(backingInstance as any, 'mock', mockMetadata);
+    setMetadata(metadata as any, 'mock', mockMetadata);
+
+    const expectations = new MockExpectations<unknown[] | undefined, unknown>(originalConstructor.name);
+    registry.addExpectations(expectations);
 
     const firstMock = mockNext<T>({
         recordingType: 'call',
-        expectations: new MockExpectations(originalConstructor.name),
+        expectations,
         materializeChain: () => { /* noop */ },
         originalConstructor,
         mockPath: `<${originalConstructor.name}>`,
         registry,
         args: [],
         isVirtual
-    }, backingInstance);
+    }, backingInstance, metadata);
 
-    const fmMetadata = getMetadata(firstMock, 'recording');
+    const fmMetadata = getMetadata<'recording', GetMetadata<'recording', UnknownRecording>>(firstMock, 'recording');
     fmMetadata.expect();
 
     return firstMock as any as Mock<T>;
@@ -332,16 +354,15 @@ export function getMockInstance<T>(mock: WithMetadata<MOCK_METADATA_KEY, MockMet
 }
 
 export function verifyMock(mock: Mock<any>): void {
-    getMetadata(mock, 'mock').expectationsRegistry.verify();
+    getMetadata<'mock', MockMetadata<any>>(mock, 'mock').expectationsRegistry.verify();
 }
 
-export function resetMock(mock: Mock<any>): void {
-    // TODO: Also clear the internal state of the expectation setter
-    getMetadata(mock, 'mock').expectationsRegistry.reset();
+export function resetMock(recording: Mock<any> | UnknownRecording): void {
+    getMetadata(recording, 'recording').reset();
 }
 
 export function debugMock(mock: Mock<any>): string {
-    return getMetadata(mock, 'mock').expectationsRegistry.toString();
+    return getMetadata<'mock', MockMetadata<any>>(mock, 'mock').expectationsRegistry.toString();
 }
 
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
@@ -387,5 +408,9 @@ export class ChainingMockCache {
         this.data.push({ key: jsonEq(key), value });
 
         return value;
+    }
+
+    public clear() {
+        this.data.length = 0;
     }
 }

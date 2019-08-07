@@ -15,6 +15,10 @@ export interface RecordingMetadata<Type extends RecordingType, Args extends unkn
      * Creates the chain of mocks required to reach the current object.
      */
     expect(): void;
+    /**
+     * Resets all expectations for this recording and its descendents
+     */
+    reset(): void;
 }
 
 type UnknownMetadata = RecordingMetadata<RecordingType, unknown[], unknown>;

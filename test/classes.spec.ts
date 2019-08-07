@@ -1,11 +1,26 @@
+import { anyString, instance, mock, when } from '../src';
 import { CatClass } from './fixtures/classes';
-import { instance, mock, when, anyString } from '../src';
 
 describe('A mock based on a class', () => {
 
     it('can create a virtual mock', () => {
         const catMock = mock<CatClass>();
         expect(instance(catMock)).not.toBeInstanceOf(CatClass);
+    });
+
+    it('can create a constructor-backed mock', () => {
+        const catMock = mock(CatClass);
+        expect(instance(catMock)).toBeInstanceOf(CatClass);
+    });
+
+    it('multiple mocks based on the same constructor don\'t clash', () => {
+        const catMock1 = mock(CatClass);
+        const catMock2 = mock(CatClass);
+        when(catMock1.color).useValue('red');
+        when(catMock2.color).useValue('green');
+
+        expect(instance(catMock1).color).toBe('red');
+        expect(instance(catMock2).color).toBe('green');
     });
 
     describe('property access', () => {
@@ -32,7 +47,7 @@ describe('A mock based on a class', () => {
     
             const mockPurr = jest.fn(() => 'miaou');
      
-            when(catMock.name).useGetter(() =>'Oggies');
+            when(catMock.name).useGetter(() => 'Oggies');
             when(catMock.food).useGetter(() => 'chips');
             when(catMock.purr).useGetter(() => mockPurr);
     
@@ -47,7 +62,7 @@ describe('A mock based on a class', () => {
             const catMock = mock<CatClass>();
             const cat = instance(catMock);
      
-            when(catMock.food).useGetter(() => { throw new Error('not hungry') });
+            when(catMock.food).useGetter(() => { throw new Error('not hungry'); });
     
             expect(() => cat.food).toThrow('not hungry');
         });
@@ -90,7 +105,7 @@ describe('A mock based on a class', () => {
     
             when(catMock.placeIn({} as any)).return('placed');
             when(catMock.purr()).throw(new Error('mock error'));
-            when(catMock.receive(anyString())).call((data) => `This is ${data}`);
+            when(catMock.receive(anyString())).call(data => `This is ${data}`);
 
             expect(cat.placeIn({} as any)).toBe('placed');
             expect(() => cat.purr()).toThrow('mock error');
