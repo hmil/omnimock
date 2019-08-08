@@ -24,7 +24,7 @@ export type MatchingLogic<T> = (candidate: T) => true | string;
  * 
  * @example
  * ```ts
- * const theAnswer = matching(
+ * const theAnswer = createMatcher(
  *     (t: number) => t === 42 || 'This is not the answer',
  *     'answer to life');
  * 
@@ -33,15 +33,37 @@ export type MatchingLogic<T> = (candidate: T) => true | string;
  * ```
  */
 // tslint:disable-next-line: no-shadowed-variable
-export function matching<T>(match: MatchingLogic<T>, name: string): Matcher<T> {
+export function createMatcher<T>(match: MatchingLogic<T>, name: string): Matcher<T> {
     return setMetadata({} as Matcher<T>, MATCHER_KEY, { match, name });
+}
+
+/**
+ * Arbitrary matcher. Use this when no other matcher does the job.
+ * 
+ * ```ts
+ * // Matches strings whose third character is the letter 'o'
+ * matching<string>(value => value.charAt(2) !== 'o');
+ * ```
+ */
+export function matching<T>(matcher: (value: T) => boolean) {
+    return createMatcher<T>(
+            value => matcher(value) || fmt`${value} did not match the custom matching logic`, 'custom matcher');
+}
+
+/**
+ * Negates a matcher.
+ */
+export function not<T>(t: T | Matcher<T>) {
+    return createMatcher<T>(actual =>
+        typeof match(t, actual) === 'string' || fmt`${actual} doesn't match not(${t})`
+    , fmt`not(${t})`);
 }
 
 /**
  * Matches variables by strict equality (===)
  */
 export function same<T>(expected: T): Matcher<T> {
-    return matching(
+    return createMatcher(
             actual => actual === expected || fmt`expected ${actual} to be the same instance as ${expected}`,
             fmt`same(${expected})`);
 }
@@ -51,21 +73,21 @@ export function same<T>(expected: T): Matcher<T> {
  */
 export function weakEquals<T extends Comparable>(ref: T): Matcher<T> {
     // tslint:disable-next-line: triple-equals
-    return matching(candidate => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
+    return createMatcher(candidate => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
 }
 
 /**
  * Matches any argument, including omitted arguments.
  */
 export function anything(): Matcher<any> {
-    return matching(() => true, 'anything');
+    return createMatcher(() => true, 'anything');
 }
 
 /**
  * Matches an object which is an `instanceof` the expected type.
  */
 export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
-    return matching(
+    return createMatcher(
             actual => actual instanceof ctr || fmt`${actual} is not an instance of ${ctr}`,
             fmt`instanceOf(${ctr})`);
 }
@@ -75,7 +97,7 @@ export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
 // ===================================
 
 function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): Matcher<T> {
-    return matching(
+    return createMatcher(
             actual => predicate(actual) || `expected ${type} but got ${typeof actual}`,
             `any ${type}`);
 }
@@ -140,7 +162,7 @@ export function anyArray(): Matcher<any[]> {
  */
 export function anyOf<T>(...args: T[]): Matcher<T> {
     const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return matching(actual => {
+    return createMatcher(actual => {
         return args.reduce<string | true>(
                 (prev, curr) => prev === true || match(curr, actual),
                 fmt`${actual}` + `did not match any of ${formattedArgs}`);
@@ -153,7 +175,7 @@ export function anyOf<T>(...args: T[]): Matcher<T> {
  */
 export function allOf<T>(...args: T[]): Matcher<T> {
     const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return matching(actual => {
+    return createMatcher(actual => {
         return args.reduce<string | true>(
                 (prev, curr) => prev !== true ? prev : match(curr, actual),
                 true);
@@ -171,7 +193,7 @@ type Comparable = string | number;
  * Matches any variable strictly greater than the provided reference.
  */
 export function greaterThan<T extends Comparable>(ref: T): Matcher<T> {
-    return matching(candidate =>
+    return createMatcher(candidate =>
             (candidate > ref) || `${candidate} is no greater than ${ref}`,
             `greater than ${ref}`);
 }
@@ -180,7 +202,7 @@ export function greaterThan<T extends Comparable>(ref: T): Matcher<T> {
  * Matches any variable strictly smaller than the provided reference.
  */
 export function smallerThan<T extends Comparable>(ref: T): Matcher<T> {
-    return matching(
+    return createMatcher(
             candidate => (candidate < ref) || `${candidate} is no smaller than ${ref}`,
             `smaller than ${ref}`);
 }
@@ -189,7 +211,7 @@ export function smallerThan<T extends Comparable>(ref: T): Matcher<T> {
  * Matches any variable greater than or equal to the provided reference.
  */
 export function greaterThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return matching(
+    return createMatcher(
             candidate => (candidate >= ref) || `${candidate} is no greater than nor equals ${ref}`,
             `greater than or equal to ${ref}`);
 }
@@ -198,7 +220,7 @@ export function greaterThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
  * Matches any variable smaller than or equal to the provided reference.
  */
 export function smallerThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return matching(
+    return createMatcher(
             candidate => (candidate <= ref) || `${candidate} is no smaller than nor equals ${ref}`,
             `smaller than or equal to ${ref}`);
 }
@@ -207,7 +229,7 @@ export function smallerThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
  * Matches any variable strictly equal to the provided reference.
  */
 export function equals<T extends Comparable>(ref: T): Matcher<T> {
-    return matching(
+    return createMatcher(
             candidate => (candidate === ref) || `${candidate} is not strictly equal to ${ref}`,
             `=== ${ref}`);
 }
@@ -238,7 +260,7 @@ export function between<T extends Comparable>(min: RangeBound<T>, max: RangeBoun
             [ max, true ];
     const rangeText = `${includeMin ? '[' : ']'}${minValue} ; ${maxValue}${includeMax ? ']' : '['}`;
 
-    return matching(candidate => (
+    return createMatcher(candidate => (
         (candidate > minValue || includeMin && candidate === minValue) &&
         (candidate < maxValue || includeMax && candidate === maxValue)
     ) || `${candidate} is not in range ${rangeText}`, `range ${rangeText}`);
@@ -253,7 +275,7 @@ export function between<T extends Comparable>(min: RangeBound<T>, max: RangeBoun
  * Matches an object whose JSON representation is the same as that of the expected.
  */
 export function jsonEq<T>(expected: T): Matcher<T> {
-    return Object.assign({}, expected, matching(actual => {
+    return Object.assign({}, expected, createMatcher(actual => {
         const serializedExpected = JSON.stringify(expected);
         const serializedActual = JSON.stringify(actual);
 
@@ -267,7 +289,7 @@ export function jsonEq<T>(expected: T): Matcher<T> {
  * The expected array can contain nested matchers.
  */
 export function arrayEq<T extends any[]>(expected: T): Matcher<T> {
-    return Object.assign(expected.slice() as T, matching(actual => {
+    return Object.assign(expected.slice() as T, createMatcher(actual => {
         if (!(actual instanceof Array)) {
             return fmt`expected array type but got ${actual}`;
         }
@@ -299,7 +321,7 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
     const expectedKeys = Object.keys(expected).sort();
 
-    return Object.assign({}, expected, matching(actual => {
+    return Object.assign({}, expected, createMatcher(actual => {
         if (typeof actual !== 'object') {
             return fmt`expected variable of type object but was ${typeof actual}`;
         }
@@ -339,7 +361,7 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
  */
 export function contains<T extends object>(expectedUnsafe: Partial<T>): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
-    return matching(actual => {
+    return createMatcher(actual => {
         const errors: string[] = [];
         for (const key of Object.keys(expected)) {
             const matched = match((expected as Indexable)[key], (actual as Indexable)[key]);

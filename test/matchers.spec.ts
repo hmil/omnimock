@@ -12,6 +12,7 @@ import {
     arrayEq,
     between,
     contains,
+    createMatcher,
     equals,
     greaterThan,
     greaterThanOrEqual,
@@ -21,6 +22,7 @@ import {
     matching,
     MatchingLogic,
     mock,
+    not,
     objectEq,
     same,
     smallerThan,
@@ -405,10 +407,40 @@ describe('argument matchers', () => {
         });
     });
 
+    describe('custom matcher', () => {
+        it('lets users write custom matching logic', () => {
+            const myMock = mock<(arg: string) => boolean>();
+
+            when(myMock(matching(value => value.charAt(2) === 'o'))).return(true);
+
+            expect(() => instance(myMock)('Ola')).toThrow(/Unexpected/);
+            expect(instance(myMock)('Olo')).toBe(true);
+        });
+    });
+
+    describe('not', () => {
+        it('negates the matcher', () => {
+            const myMock = mock<(arg: string) => boolean>();
+
+            when(myMock(not(matching(value => value.charAt(2) === 'o')))).return(true);
+
+            expect(instance(myMock)('Ola')).toBe(true);
+            expect(() => instance(myMock)('Olo')).toThrow(/Unexpected/);
+        });
+        it('works with bare values', () => {
+            const myMock = mock<(arg: string) => boolean>();
+
+            when(myMock(not('Olo'))).return(true);
+
+            expect(instance(myMock)('Ola')).toBe(true);
+            expect(() => instance(myMock)('Olo')).toThrow(/Unexpected/);
+        });
+    });
+
     describe('match', () => {
         it('uses the matcher logic if present', () => {
             const mockMatcher = mock<MatchingLogic<string>>();
-            const matcher = matching(instance(mockMatcher), 'mock matcher');
+            const matcher = createMatcher(instance(mockMatcher), 'mock matcher');
             when(mockMatcher('hello')).return(true).once();
 
             expect(match(matcher, 'hello')).toBe(true);

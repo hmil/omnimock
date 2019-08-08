@@ -95,6 +95,15 @@ instance(mockFn)({ name: 'Olinka' }); // Error
 instance(mockFn)(new Cat('Oggies'));  // Error
 ```
 
+## not
+
+Reverses the result of matching against the provided value.
+```ts
+match(not(between(0, 10)), 2)   // Error
+match(not(between(0, 10)), 30)  // OK
+match(not('bird'), 'bird')      // Error
+```
+
 ## greaterThan
 
 Matches any variable strictly greater than the provided reference.
@@ -181,13 +190,25 @@ test({ name: 'Ola', age: 35 }));                 // OK
 ```
 
 
-# <a name="custom-matcher"></a> Custom matcher
+# <a name="custom-matcher"></a> Custom matching
 
-Use the function `matching` to create a custom matcher when you cannot find a built-in matcher that suits your needs.  
+## Inline matching logic
+
+If you cannot find a matcher that suits your needs, create a custom matching condition with the `matching` matcher.
+
+```ts
+when(myMock(matching(value => value.charAt(2) === 'o'))).return(true);
+```
+
+## Custom matcher
+
+If you plan to re-use your matcher a lot, it is best to create a real custom matcher. Doing it this way helps OmniMock print better error messages when things don't go as expected.
+
+Use the function `createMatcher` to create a re-usable custom matcher.  
 Return `true` from the callback if the provided value matches, or a string describing why it did not match.
 
 ```ts
-const theAnswer = matching(
+const theAnswer = createMatcher(
     (actual: number) => actual === 42 || 'This is not the answer',
     'answer to life');
 
@@ -199,7 +220,7 @@ Wrap it in a factory function if your matcher takes parameters.
 
 ```ts
 function withScore(expected: number) {
-    return matching(
+    return createMatcher(
         (actual: {score: number}) => actual.score === expected || 
             `Expected score to be ${expected} but was ${actual.score}`,
         'with score');
@@ -209,4 +230,4 @@ match(withScore(12), { score: 10 })    // 'Expected score to be 12 but was 10'
 match(withScore(12), { score: 12 })    // true
 ```
 
-If you think your matcher could be useful to other people too, please consider opening a PR to add it to the built-in matchers.
+This is how built-in matchers are actually implemented. If you think your matcher could be useful to other people, please consider opening a PR to add it to the built-in matchers.
