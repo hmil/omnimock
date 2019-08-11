@@ -3,16 +3,6 @@ import { CatClass } from './fixtures/classes';
 
 describe('A mock based on a class', () => {
 
-    it('can create a virtual mock', () => {
-        const catMock = mock<CatClass>();
-        expect(instance(catMock)).not.toBeInstanceOf(CatClass);
-    });
-
-    it('can create a constructor-backed mock', () => {
-        const catMock = mock(CatClass);
-        expect(instance(catMock)).toBeInstanceOf(CatClass);
-    });
-
     it('multiple mocks based on the same constructor don\'t clash', () => {
         const catMock1 = mock(CatClass);
         const catMock2 = mock(CatClass);
@@ -25,7 +15,7 @@ describe('A mock based on a class', () => {
 
     describe('property access', () => {
         it('can mock property access', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
 
             const mockPurr = jest.fn(() => 'miaou');
@@ -42,7 +32,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can mock property access in getter style', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             const mockPurr = jest.fn(() => 'miaou');
@@ -59,7 +49,7 @@ describe('A mock based on a class', () => {
         });
     
         it('forwards errors in getters', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
      
             when(catMock.food).useGetter(() => { throw new Error('not hungry'); });
@@ -68,7 +58,7 @@ describe('A mock based on a class', () => {
         });
     
         it('prevents unmocked property access', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             expect(() => cat.name).toThrow(/Unexpected/);
@@ -91,7 +81,7 @@ describe('A mock based on a class', () => {
         });
 
         xit('is undefined behavior to use actual on a virtual mock', () => {
-            const virtualMock = mock<CatClass>();
+            const virtualMock = mock(CatClass);
             when(virtualMock.name).useActual();
             expect(virtualMock.name).toBeUndefined();
         });
@@ -100,7 +90,7 @@ describe('A mock based on a class', () => {
 
     describe('method calls', () => {
         it('can mock function calls', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             when(catMock.placeIn({} as any)).return('placed');
@@ -115,7 +105,7 @@ describe('A mock based on a class', () => {
 
         it('can call through instance backed mocks', () => {
             const concreteMock = mock(new CatClass('Olinka'));
-            const virtualMock = mock<CatClass>();
+            const virtualMock = mock(CatClass);
 
             when(concreteMock.purr()).callThrough();
             when(concreteMock.greet(anyString())).callThrough();

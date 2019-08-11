@@ -24,37 +24,40 @@ import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording
  * @example
  * 
  * ```
- * // Mock an interface
- * const mockedInterface = mock<SomeInterface>()
- * 
- * // Passing a name helps generate better error messages
- * const mockedInterface = mock<SomeInterface>('someInterface')
- * 
- * // Mock a class
- * const mockedClass = mock(MyClass)
- * 
- * // Construct and mock a class (allows using `.andCallThrough()`)
- * const mockedClass = mock(MyClass, ['parameters', 'of the', 'constructor'])
- * 
- * // Mock an object (allows `.andCallThrough()`)
- * const mockedObject = mock(someObject)
+ * // TODO: Rewrite examples
  * ```
  */
-export function mock<T>(name?: string): Mock<T>;
+export function mock<T>(name: string): Mock<T>;
 export function mock<T>(ctr: ConstructorType<T>): Mock<T>;
-export function mock<T extends AnyFunction>(backing: T): Mock<T>;
-export function mock<T extends object>(backing: Partial<T>): Mock<T>;
-export function mock<T extends AnyFunction | object>(toMock: string | Partial<T> | undefined): Mock<T> {
-    if (toMock === undefined) {
-        toMock = 'virtual mock';
+export function mock<T extends AnyFunction | object>(backing: T): Mock<T>;
+export function mock<T extends AnyFunction>(name: string, backing: T): Mock<T>;
+export function mock<T extends object>(name: string, backing: Partial<T>): Mock<T>;
+export function mock<T extends AnyFunction | object>(
+        nameOrTarget: string | ConstructorType<T> | T, 
+        backing?: Partial<T>
+): Mock<T> {
+    const name = (typeof nameOrTarget !== 'string') ? inferMockName(nameOrTarget) : nameOrTarget;
+    if (backing !== undefined) {
+        return createBackedMock(name, backing);
     }
-    if (typeof toMock === 'string') {
-        return createVirtualMock(toMock);
+    if (typeof nameOrTarget === 'function') {
+        return createClassOrFunctionMock(name, nameOrTarget as AnyFunction);
     }
-    if (typeof toMock === 'function') {
-        return createClassOrFunctionMock(toMock as AnyFunction);
+    if (typeof nameOrTarget !== 'string') {
+        return createBackedMock(name, nameOrTarget);
     }
-    return createBackedMock(toMock);
+    return createVirtualMock(name);
+}
+
+function inferMockName(target: AnyFunction | object): string {
+    switch (typeof target) {
+        case 'function':
+            return target.name || 'Function';
+        case 'object':
+            return target.constructor.name;
+        default:
+            return 'unknown';
+    }
 }
 
 /**
@@ -62,12 +65,17 @@ export function mock<T extends AnyFunction | object>(toMock: string | Partial<T>
  * 
  * Useful when you need an object but you don't expect it to be used.
  */
-export function mockInstance<T>(name?: string, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends AnyFunction>(backing: T, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends object>(backing: Partial<T>, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T>(name: string, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T>(ctr: ConstructorType<T>): Mock<T>;
+export function mockInstance<T extends AnyFunction | object>(backing: T, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends AnyFunction>(name: string, backing: T, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends object>(name: string, backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(
-        backingOrName: string | Partial<T> | undefined, config?: (m: Mock<T>) => void): T {
-    const builder = mock<T>((backingOrName || {}) as T);
+        nameOrTarget: string | ConstructorType<T> | T, 
+        backing?: Partial<T>, 
+        config?: (m: Mock<T>) => void): T {
+    // TypeScript has a hard time following here with all the overloads.
+    const builder = mock<T>(nameOrTarget as string, backing as T);
     if (config) {
         config(builder);
     }

@@ -3,7 +3,7 @@ import { instance, mock, when } from '../src';
 describe('mocking functions', () => {
 
     it('allows faking a function', () => {
-        const virtualMock = mock<(arg: number) => string>();
+        const virtualMock = mock<(arg: number) => string>('virtualMock');
         when(virtualMock(2)).return('virtual');
         expect(instance(virtualMock)(2)).toBe('virtual');
     });

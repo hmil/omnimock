@@ -3,10 +3,10 @@ import { CatClass } from './fixtures/classes';
 
 describe('manual chaining', () => {
     it('is very verbose', () => {
-        const catMock = mock<CatClass>();
-        const tagMock = mock<CatClass['tag']>();
+        const catMock = mock(CatClass);
+        const tagMock = mock<CatClass['tag']>('tag');
         const tag = instance(tagMock);
-        const chipMock = mock<typeof tag['chip']>();
+        const chipMock = mock<typeof tag['chip']>('chip');
         const chip = instance(chipMock);
 
         when(catMock.tag).useValue(tag);
@@ -20,7 +20,7 @@ describe('manual chaining', () => {
 describe('automatic chaining', () => {
 
     it('works with getters and fake', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         when(catMock.tag.chip.id).useValue(456);
         expect(instance(catMock).tag.chip.id).toBe(456);
     });
@@ -32,7 +32,7 @@ describe('automatic chaining', () => {
     });
 
     it('works with methods and fake', async () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         when(catMock.getTag(1).manufacturer.fetch()).call(async () => 'I <3 chaining');
         expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('I <3 chaining');
     });
@@ -52,7 +52,7 @@ describe('automatic chaining', () => {
     });
 
     it('catches unexpected accesses', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
 
         // Actually assert the chip path
         when(catMock.tag.chip.id).useValue(123);
@@ -64,7 +64,7 @@ describe('automatic chaining', () => {
     });
 
     it('follows the rules of cascading matchers', async () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const realCat = new CatClass('Olinka');
 
         // Automatic chaining will create an expectation for getTag(> 10)
@@ -83,7 +83,7 @@ describe('automatic chaining', () => {
     });
 
     it('allows any number of accesses', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
 
         when(catMock.purr()).return('hoyhoy').anyTimes();
         when(catMock.getTag(1).manufacturer.fetch()).resolve('hoyhoy').once();

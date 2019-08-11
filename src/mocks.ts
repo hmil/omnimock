@@ -305,6 +305,7 @@ function mockNext<T>(params: MockParams, maybeStub?: any, maybeMetadata?: WithMe
 }
 
 function mockFirst<T extends object>(
+        name: string,
         backingInstance: Partial<T>,
         originalConstructor: AnyFunction,
         isVirtual: boolean): Mock<T> {
@@ -329,7 +330,7 @@ function mockFirst<T extends object>(
     };
     setMetadata(metadata as any, 'mock', mockMetadata);
 
-    const expectations = new MockExpectations<unknown[] | undefined, unknown>(originalConstructor.name);
+    const expectations = new MockExpectations<unknown[] | undefined, unknown>(name);
     registry.addExpectations(expectations);
 
     const firstMock = mockNext<T>({
@@ -337,7 +338,7 @@ function mockFirst<T extends object>(
         expectations,
         materializeChain: () => { /* noop */ },
         originalConstructor,
-        mockPath: `<${originalConstructor.name}>`,
+        mockPath: `<${name}>`,
         registry,
         args: [],
         isVirtual
@@ -367,20 +368,21 @@ export function debugMock(mock: Mock<any>): string {
 
 export function createVirtualMock<T extends object>(name: string): Mock<T> {
     const toMock = createClassWithName<T>(name);
-    return mockFirst<T>(toMock as T, toMock as any as AnyFunction, true);
+    return mockFirst<T>(name, toMock as T, toMock as any as AnyFunction, true);
 }
 
-export function createClassOrFunctionMock<T extends object>(ctrOrFn: ConstructorType<T> | AnyFunction): Mock<T> {
+export function createClassOrFunctionMock<T extends object>(
+        name: string, ctrOrFn: ConstructorType<T> | AnyFunction): Mock<T> {
     // When `mock` is invoked with a function, either the user is trying to create a virtual mock of a class
     // or he's trying to create a backed mock of a function.
 
     // FIXME: We set isVirtual to true, but really what we ought to do is use isVirtual: false and transition to
     // isVirtual: true if the first-level access is a member access (cf. comment above)
-    return mockFirst<T>(ctrOrFn as T, ctrOrFn as AnyFunction, true);
+    return mockFirst<T>(name, ctrOrFn as T, ctrOrFn as AnyFunction, true);
 }
 
-export function createBackedMock<T extends object | AnyFunction>(toMock: Partial<T>): Mock<T> {
-    return mockFirst(toMock, toMock.constructor as AnyFunction, false);
+export function createBackedMock<T extends object | AnyFunction>(name: string, toMock: Partial<T>): Mock<T> {
+    return mockFirst(name, toMock, toMock.constructor as AnyFunction, false);
 }
 
 

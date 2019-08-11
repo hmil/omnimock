@@ -4,7 +4,7 @@ import { CatClass } from './fixtures/classes';
 describe('reset()', () => {
 
     it('resets an entire mock', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const cat = instance(catMock);
     
         when(catMock.food).useValue('chips');
@@ -23,7 +23,7 @@ describe('reset()', () => {
     });
 
     it('resets a specific member expectation', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const cat = instance(catMock);
     
         when(catMock.food).useValue('chips');
@@ -42,7 +42,7 @@ describe('reset()', () => {
     });
 
     it('resets a specific method call but keeps the chain', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const cat = instance(catMock);
     
         when(catMock.food).useValue('chips');
@@ -62,7 +62,7 @@ describe('reset()', () => {
     });
 
     it('trims a chain', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const cat = instance(catMock);
     
         when(catMock.food).useValue('chips');
@@ -82,7 +82,7 @@ describe('reset()', () => {
     });
 
     it('reset expectations cant come back from the dead', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const cat = instance(catMock);
     
         when(catMock.food).useValue('chips');
