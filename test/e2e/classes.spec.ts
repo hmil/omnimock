@@ -79,13 +79,6 @@ describe('A mock based on a class', () => {
             expect(concrete.name).toBe('Olinka');
             expect(concrete.food).toBe('oreos');
         });
-
-        // TODO: Clarify this case
-        xit('is undefined behavior to use actual on a virtual mock', () => {
-            const virtualMock = mock(CatClass);
-            when(virtualMock.name).useActual();
-            expect(virtualMock.name).toBeUndefined();
-        });
     });
 
     describe('method calls', () => {
