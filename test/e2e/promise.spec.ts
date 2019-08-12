@@ -1,5 +1,4 @@
-import { mock, when, instance } from '../../src';
-import { CatClass } from '../fixtures/classes';
+import { instance, mock, when } from '../../src';
 
 describe('promise helpers', () => {
 

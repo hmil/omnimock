@@ -184,12 +184,11 @@ You can mock any object type or interface without providing an actual instance o
 Virtual mocks have some limitations. [Learn more here](#backed-vs-virtual).
 
 ```ts
-// Mock a class by passing its constructor to the mock function.
-const mockAssemblyService = mock(AssemblyService);
 // Mock an interface by passing it as a type argument to the mock function.
-const mockAssemblyService = mock<AssemblyService>();
-// Use this form to give interface mocks a name, or to customize the name of a class mock.
+// Give it a name to help print nice error messages
 const mockAssemblyService = mock<AssemblyService>('mockAssemblyService');
+// Mock a class from its constructor. The name and type are infered automatically.
+const mockAssemblyService = mock(AssemblyService);
 ```
 
 ### <a name="backed-mock"></a> Backed mocks
@@ -202,9 +201,9 @@ const realAssemblyService = {
     version: 2
 };
 // realAssemblyService "backs" assemblyServiceMock
-const assemblyServiceMock = mock(realAssemblyService);
+const assemblyServiceMock = mock('assemblyServiceMock', realAssemblyService);
 // This works well with classes too
-const assemblyServiceMock = mock(new AssemblyService());
+const assemblyServiceMock = mock('assemblyServiceMock', new AssemblyService());
 ```
 
 By default, property access on a backed mock don't trigger an error (ie. they behave like .[useActual](#call-through)().[anyTimes](#quantifiers)()).  
@@ -219,7 +218,7 @@ when(assemblyServiceMock.assemble).useActual().never();
 You can omit properties when you create a backed mock.
 
 ```ts
-const assemblyServiceMock = mock<AssemblyService>({
+const assemblyServiceMock = mock<AssemblyService>('assemblyServiceMock', {
     version: 2
 });
 ```
@@ -238,12 +237,10 @@ This is useful to mock data types (ie. classes or types which contain raw data a
 You can also mock simple functions, both as a virtual or a backed mock.
 
 ```ts
-// No-name virtual mock
-const luckyNumberMock = mock<(name: string) => number>();
 // Named virtual mock
 const luckyNumberMock = mock<(name: string) => number>('luckyNumber');
-// Backed mock (using a named function helps print better error messages)
-const luckyNumberMock = mock(function luckyNumber(name: string) {
+// Backed mock
+const luckyNumberMock = mock('luckyNumber', (name: string) => {
     return name.charCodeAt(0);
 });
 ```
@@ -268,39 +265,62 @@ when(codex.getCard('Starlight'))
         .return(mockCard);
 ```
 
-Specifying all members of the card can be tedious, especially if the tested class does not actually use the card. You could write the following to make your test more succint without losing type safety.
+Specifying all members of the card can be tedious, especially if the tested class does not actually use the card. You could write the following to make your test more succint without losing type safety and while keeping the guarantee of no undefined behavior.
 
 ```ts
-const mockCard = instance(mock<MtgCard>('fake card'));
-when(codex.getCard('Starlight'))
-        .return(mockCard);
+const mockCard = instance(mock<MtgCard>('fake card', {
+    // Omit the properties you don't need. 
+    // Omnimock will throw an error if it turns out you need them.
+    id: 1038,
+    color: 'white'
+}));
+when(codex.getCard('Starlight')).return(mockCard);
 ```
 
 In fact, this pattern is so common that we created a shortcut for it: `mockInstance`.
 
 ```ts
-when(codex.getCard('Starlight'))
-        .return(mockInstance('fake card'));
+const mockCard = mockInstance<MtgCard>('fake card', {
+    id: 1038,
+    color: 'white'
+});
+when(codex.getCard('Starlight')).return(mockCard);
 ```
 
-The mock returned from `mockInstance` has no behavior attached to it and therefore it will throw an error when used.  
+A common pattern is to provide a return value which you are not sure if it is used or not.
 
-You can provide a callback to attach some behavior to your mock.
+```ts
+when(codex.getCard('Starlight')).return(mockInstance('fake card'));
+```
+
+Then, you keep adding the necessary attributes as you discover them. For instance, I can write the following if I get the error `Unexpected property access: <fake card>.id`.
+
+```ts
+when(codex.getCard('Starlight')).return(mockInstance('fake card', {
+    id: 1038
+}));
+```
+
+You can further customize the mock by using a callback. The callback receives the mock builder.
 
 ```ts
 when(codex.getCard('Starlight'))
-        .return(mockInstance('fake card', (fakeCard) => {
-            when(fakeCard.id).useValue(1038);
-        }));
+    .return(mockInstance('fake card', {}, fakeCard => {
+        when(fakeCard.play(anything())).call(gameState => { 
+            expect(gameState.turn).toBe(2);
+        });
+    }));
 ```
 
-Note that you also have the alternative of using [deep chaining](#automatic-chaining). The above is roughly equivalent to the following.
+This pattern is useful to avoid confusing the mock builder and the mock instance, since the mock builder can't easily escape from the callback. However,, this syntax can quickly become too heavy, and you might prefer to use [deep chaining](#automatic-chaining).  
+The example above is roughly equivalent to the following.
 
 ```ts
-when(codex.getCard('Starlight').id).useValue(1038);
+when(codex.getCard('Starlight').play(anything())).call(gameState => {
+    expect(gameState.turn).toBe(2);
+});
 ```
 
-Depending on the exact situation, either one may be more appropriate.
 
 ## <a name="matching"></a> Matching
 
@@ -462,6 +482,30 @@ when(myMock.fetchRemoteData(0)).rejet('Invalid id');
 By mocking, you control interactions of the tested code with the external world. Verification is the process of ensuring that the tested code made the right number of calls.  
 By deault, any call which is not matched by any expectation throws an exception. Expectations accept any number of calls by default. You may customize how many calls of a specific expectation you expect to see with _quantifiers_.  
 At the end of the test, you should call `verify` to ensure all expected calls were realized.
+
+```ts
+import { verify } from 'omnimock';
+
+when(myMock.getName()).return('apollo').times(2);
+when(myMock.luckyNumber).useValue(23).atLeastOnce();
+
+verify(myMock); // Throws an error because the expectations above were not met
+
+instance(myMock).getName();
+instance(myMock).luckyNumber;
+
+verify(myMock); // Throws an error because myMock.getName was expected twice but it was called only once
+
+// You can verify a subset of the expectations.
+verify(myMock.luckyNumber); // This does not throw
+
+when(myMock.getHero('Bilbo').speak()).return('Time for some tea').once();
+
+verify(myMock.getHero('Bilbo')); // throws an error because speak() was expected once but was not called
+verify(myMock.getHero('Gloin')); // Does not throw
+// Callign verify on the base mock verifies all expectations, however deeply nested
+verify(myMock); // Throws
+```
 
 ### <a name="quantifiers"></a> Quantifiers
 

@@ -40,10 +40,28 @@ export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
 /**
  * Creates a mock for a class, an interface or an object instance.
  * 
+ * Remember to use `instance()` before feeding your mock to your tested code.
+ * 
  * @example
  * 
  * ```
- * // TODO: Rewrite examples
+ * // Create a virtual mock
+ * mock<SomeType>('someTypeMock')
+ * 
+ * // Create a backed mock of a class
+ * mock('myClassMock', new MyClass());
+ * 
+ * // Create a backed mock from a partial object definition
+ * mock<MyObjectType>('myObject', {
+ *     foo: 'bar'
+ * });
+ * 
+ * // Create a backed mock of a function
+ * mock('myFunction', (s: string) => s.charCodeAt(1));
+ * 
+ * // Creates a virtual mock with the name and type inferred from a constructor
+ * // Warning: Does not work with abstract classes and interfaces!
+ * mock(SomeClass)
  * ```
  */
 export function mock<T>(name: string): Mock<T>;                                     // 1

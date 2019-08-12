@@ -1,4 +1,4 @@
-import { instance, mock, verify, when, mockInstance } from '../../src';
+import { instance, mock, verify, when } from '../../src';
 import { CatClass } from '../fixtures/classes';
 
 describe('Expectation quantifiers', () => {
@@ -167,6 +167,15 @@ describe('Expectation quantifiers', () => {
                 expect(e.message).toContain('1 unsatisfied');
                 expect(e.message).toContain('<CatClass>.getTag(22).chip');
             }
+        });
+
+        it('does not throw when verifying something unspecified', () => {
+            const catMock = mock(CatClass);
+            when(catMock.getTag(122).chip.id).useValue(12).once();
+
+            expect(() => verify(catMock)).toThrow(/1 unsatisfied/);
+            expect(() => verify(catMock.getTag(122))).toThrow(/1 unsatisfied/);
+            expect(() => verify(catMock.getTag(221))).not.toThrow();
         });
     });
 });

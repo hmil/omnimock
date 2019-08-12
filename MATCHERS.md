@@ -204,30 +204,4 @@ when(myMock(matching(value => value.charAt(2) === 'o'))).return(true);
 
 If you plan to re-use your matcher a lot, it is best to create a real custom matcher. Doing it this way helps OmniMock print better error messages when things don't go as expected.
 
-Use the function `createMatcher` to create a re-usable custom matcher.  
-Return `true` from the callback if the provided value matches, or a string describing why it did not match.
-
-```ts
-const theAnswer = createMatcher(
-    (actual: number) => actual === 42 || 'This is not the answer',
-    'answer to life');
-
-match(theAnswer, 22) // 'This is not the answer'
-match(theAnswer, 42) // true
-```
-
-Wrap it in a factory function if your matcher takes parameters.
-
-```ts
-function withScore(expected: number) {
-    return createMatcher(
-        (actual: {score: number}) => actual.score === expected || 
-            `Expected score to be ${expected} but was ${actual.score}`,
-        'with score');
-}
-
-match(withScore(12), { score: 10 })    // 'Expected score to be 12 but was 10'
-match(withScore(12), { score: 12 })    // true
-```
-
-This is how built-in matchers are actually implemented. If you think your matcher could be useful to other people, please consider opening a PR to add it to the built-in matchers.
+Take a look at `matchers.ts` to see how the built-in matchers are implemented.
