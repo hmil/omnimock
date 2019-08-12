@@ -1,5 +1,5 @@
-import { anyString, instance, Mock, mock, mockInstance, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { anyString, instance, Mock, mock, mockInstance, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('ways to create a mock', () => {
     it('create an anonymous virtual mock with a name', () => {
@@ -34,12 +34,28 @@ describe('ways to create a mock', () => {
 
         expect(new (instance(m))('Olinka').food).toBe('chilli');
     });
+
 });
 
 function verifyCatMock(m: Mock<CatClass>) {
     when(m.food).useValue('oreos');
     expect(instance(m).food).toBe('oreos');
 }
+
+describe('ways to obtain a mock instance from a mock', () => {
+    it('is obtained at the root of the mock', () => {
+        const m = mock<CatClass>('CatClass');
+        when(m.food).useValue('oreos');
+        expect(instance(m).food).toBe('oreos');
+    });
+
+    it('can not be obtained from a deeper level', () => {
+        const m = mock<CatClass>('CatClass');
+        when(m.food).useValue('oreos');
+        expect(() => instance(m.food)).toThrow(/It was called on <CatClass>.food/);
+    });
+});
+
 
 describe('ways to create a mock instance', () => {
 

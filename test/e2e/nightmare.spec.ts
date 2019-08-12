@@ -1,4 +1,4 @@
-import { anyString, between, greaterThan, instance, mock, when } from '../src';
+import { anyString, between, greaterThan, instance, mock, when } from '../../src';
 
 describe('The nightmare test suite', () => {
 

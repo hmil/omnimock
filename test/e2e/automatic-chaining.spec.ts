@@ -1,5 +1,5 @@
-import { greaterThan, instance, mock, verify, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { greaterThan, instance, mock, verify, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('manual chaining', () => {
     it('is very verbose', () => {

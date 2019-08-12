@@ -1,7 +1,7 @@
 import { AnyFunction, FnType } from './base-types';
 import { ChainingMockCache } from './ChainableMockCache';
-import { MockExpectations } from './expectations';
-import { formatArgArray, humanReadableObjectPropertyAccess } from './formatting';
+import { MockExpectations, RuntimeContext } from './expectations';
+import { formatArgArray, formatPropertyAccess } from './formatting';
 import { getMetadata, METADATA_KEY } from './metadata';
 import { Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
 
@@ -68,24 +68,24 @@ interface MockParameters<T extends object> {
     expectedCalls: MockExpectations<unknown[] | undefined, object>;
 }
 
-function memoize<T>(generator: () => T) {
+function lazySingleton<Args extends any[], T>(generator: (...args: Args) => T) {
     let inst: T | undefined;
-    return () => {
+    return (...args: Args) => {
         if (inst === undefined) {
-            inst = generator();
+            inst = generator(...args);
         }
         return inst;
     };
 }
 
-function map<T, U>(t: T | undefined, generator: (t: T) => U): U | undefined {
+function map<T, U>(t: T | undefined, generator: (t: T) => U): U | undefined {
     if (t === undefined) {
         return undefined;
     }
     return generator(t);
 }
 
-function getTargetPrototype<T extends object>(target: Partial<T> | T): any {
+function getTargetPrototype<T extends object>(target: Partial<T> | T): any {
     if (typeof target === 'function') {
         return target.prototype;
     }
@@ -107,24 +107,26 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
         if (expectations != null) {
             return expectations;
         }
-        expectations = createExpectations(params.path + humanReadableObjectPropertyAccess(prop));
+        expectations = createExpectations(params.path + formatPropertyAccess(prop));
         params.expectedMemberAccess.set(prop, expectations);
         return expectations;
     }
 
+    const instance = lazySingleton((context: RuntimeContext<unknown[] | undefined, object>) => instantiateMock<T>({
+        getBacking: context.getOriginalTarget,
+        getOriginalPrototype: map(
+                context.getOriginalTarget, getOriginalTarget => getTargetPrototype(getOriginalTarget())),
+        expectedCalls: params.expectedCalls,
+        expectedMemberAccess: params.expectedMemberAccess
+    }));
+
+    let hasChained = false;
+
     function chain() {
-        params.expectations.addExpectation(params.args, context => {
-            if (params.initialMock !== undefined) {
-                return params.initialMock;
-            }
-            return instantiateMock<T>({
-                getBacking: context.getOriginalTarget,
-                getOriginalPrototype: map(
-                        context.getOriginalTarget, getOriginalTarget => getTargetPrototype(getOriginalTarget())),
-                expectedCalls: params.expectedCalls,
-                expectedMemberAccess: params.expectedMemberAccess
-            });
-        });
+        if (!hasChained) {
+            hasChained = true;
+            params.expectations.addExpectation(params.args, instance);
+        }
         params.chain();
     }
 
@@ -137,11 +139,29 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
             mockCache.clear();
             params.expectedMemberAccess.clear();
             params.expectedCalls.reset();
+            hasChained = false;
         },
         expect: () => {
             params.chain();
         },
-        debug: () => 'TODO',
+        debug: () => {
+            const acc: string[] = [];
+            if (params.expectedCalls.size > 0) {
+                acc.push(params.expectedCalls.toString());
+            }
+            for (const access of params.expectedMemberAccess.values()) {
+                acc.push(access.toString());
+            }
+
+            const childrenDebug = mockCache.getAll()
+                    .map(m => getMetadata(m, RECORDING_METADATA_KEY).debug())
+                    .filter(s => s.length > 0)
+                    .join('\n');
+
+            return acc.join('\n') + 
+                    (acc.length > 0 && childrenDebug.length > 0 ? `\n` : '') +
+                    childrenDebug;
+        },
         verify: () => {
             return params.expectations.getAllUnsatisfied()
                     .map(expectation => expectation.toString())
@@ -152,7 +172,7 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
             if (params.initialMock !== undefined) {
                 return params.initialMock;
             }
-            throw new Error('Cannot obtain an `instance` elsewhere than at the root of a mock.');
+            throw new Error(`"instance" needs to be called on the root of a mock. It was called on ${params.path}.`);
         }
     };
 
@@ -162,7 +182,7 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
                 return { [RECORDING_METADATA_KEY]: metadata };
             }
             return mockCache.getOrElse(p, () => {
-                const newPath = params.path + humanReadableObjectPropertyAccess(p);
+                const newPath = params.path + formatPropertyAccess(p);
                 return mockNext({
                     recordingType: 'getter',
                     expectations: getOrCreatePropertyExpectations(p),
@@ -175,28 +195,19 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
             });
         },
         apply(_target: T, _thisArg: any, argArray?: any): any {
-            const args = argArray || [];
-            const newPath = params.path + `(${formatArgArray(argArray)})`;
-            return mockCache.getOrElse(args, () => mockNext({
-                recordingType: 'call',
-                expectations: params.expectedCalls,
-                path: newPath,
-                args,
-                chain,
-                expectedCalls: new MockExpectations(newPath),
-                expectedMemberAccess: new Map()
-            }));
-        },
-        getOwnPropertyDescriptor(_target: T, p: PropertyKey): PropertyDescriptor | undefined {
-            if (p === METADATA_KEY) {
-                return {
-                    configurable: false,
-                    enumerable: false,
-                    value: null,
-                    writable: false,
-                };
-            }
-            return undefined;
+            const args = sanitizeArgArray(argArray);
+            return mockCache.getOrElse(args, () => {
+                const newPath = params.path + `(${formatArgArray(argArray)})`;
+                return mockNext({
+                    recordingType: 'call',
+                    expectations: params.expectedCalls,
+                    path: newPath,
+                    args,
+                    chain,
+                    expectedCalls: new MockExpectations(newPath),
+                    expectedMemberAccess: new Map()
+                });
+            });
         },
         has(_target: T, p: PropertyKey): boolean {
             if (p === METADATA_KEY) {
@@ -204,17 +215,17 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
             }
             return false;
         },
-        set(_target: T, _p: PropertyKey, _value: any, _receiver: any): boolean {
-            return false;
+        set(_target: T, _p: PropertyKey, _value: any, _receiver: any): boolean {
+            throw new Error('Cannot set a property on an expectation setter. Did you forget `instance()`?');
         },
         deleteProperty(_target: T, _p: PropertyKey): boolean {
-            return false;
+            throw new Error('Cannot delete a property on an expectation setter. Did you forget `instance()`?');
         },
         defineProperty(_target: T, _p: PropertyKey, _attributes: PropertyDescriptor): boolean {
-            return false;
+            throw new Error('Cannot define a property on an expectation setter. Did you forget `instance()`?');
         },
         construct(_target: T, argArray: any, _newTarget?: any): object {
-            const args = [constructorCacheKey, ...(argArray || [])];
+            const args = [constructorCacheKey, ...sanitizeArgArray(argArray)];
             const newPath = params.path + `.<new>(${formatArgArray(args)})`;
             return mockCache.getOrElse(args, () => mockNext({
                 recordingType: 'call',
@@ -244,10 +255,17 @@ function mockNext<T extends object>(params: MockParameters<T>): Mock<T> {
     return new Proxy(stub as any, handler);
 }
 
+function sanitizeArgArray(args: any[] | undefined): any[] {
+    // The prototype of ProxyHandler.apply allows undefined arrays but these have not been observed in practice
+    return args
+        // istanbul ignore next
+        || [];
+}
+
 function mockFirst<T extends object>(name: string, proto: object, backing?: T | Partial<T>): Mock<T> {
-    const expectedCalls = new MockExpectations<unknown[] | undefined, object>(`<${name}>`);
+    const expectedCalls = new MockExpectations<unknown[] | undefined, object>(`<${name}>`);
     const expectedMemberAccess = new Map();
-    const instance = memoize(() => instantiateMock<T>({
+    const instance = lazySingleton(() => instantiateMock<T>({
         getBacking: map(backing, b => () => b),
         getOriginalPrototype: () => proto,
         expectedCalls,
@@ -255,7 +273,7 @@ function mockFirst<T extends object>(name: string, proto: object, backing?: T | 
     }));
     return mockNext({
         path: `<${name}>`,
-        args: [],
+        args: undefined,
         chain: () => { /* noop */ },
         expectations: new MockExpectations(''),
         recordingType: 'getter',
@@ -271,7 +289,7 @@ interface InstanceParameters<T extends object> {
     /**
      * Returns the backing instance. Note that at this point, even virtual mocks have a backing instance.
      */
-    getBacking?: () => T | Partial<T>;
+    getBacking?: () => T | Partial<T>;
 
     /**
      * The expected calls on this mock.
@@ -319,20 +337,32 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                 }
             }
     
-            throw new Error(`Unexpected property access: ${params.expectedCalls.path}.${String(p)}`);
+            throw new Error(`Unexpected property access: ${params.expectedCalls.path}${formatPropertyAccess(p)}`);
         },
-        // set(target: T, p: PropertyKey, value: any, receiver: any): boolean {
-        //     return Reflect.set(target, p, value, receiver);
-        // },
-        // deleteProperty(_target: T, p: PropertyKey): boolean {
-        //     return Reflect.deleteProperty(target, p);
-        // },
+        set(_target: T, p: PropertyKey, value: any, receiver: any): boolean {
+            if (params.getBacking) {
+                return Reflect.set(params.getBacking(), p, value, receiver);
+            } else {
+                throw new Error(
+                        `Unexpected write: ${params.expectedCalls.path}${formatPropertyAccess(p)} = ${value}\n` +
+                        `Use a backed mock if you want to test property mutations.`);
+            }
+        },
+        deleteProperty(_target: T, p: PropertyKey): boolean {
+            if (params.getBacking) {
+                return Reflect.deleteProperty(params.getBacking(), p);
+            } else {
+                throw new Error(
+                        `Unexpected: delete ${params.expectedCalls.path}${formatPropertyAccess(p)}\n` +
+                        `Use a backed mock if you want to test property mutations.`);
+            }
+        },
         apply(_target: T, thisArg: any, argArray?: any): any {
             function getOriginal(getBacking: () => any) {
-                return Reflect.apply(getBacking(), thisArg, argArray || []);
+                return Reflect.apply(getBacking(), thisArg, sanitizeArgArray(argArray));
             }
             const result = params.expectedCalls.handle({
-                args: argArray || [],
+                args: sanitizeArgArray(argArray),
                 context: thisArg,
                 getOriginalTarget: map(params.getBacking, getBacking => () => getOriginal(getBacking))
             });
@@ -344,7 +374,7 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
             if (params.getBacking) {
                 const backing = params.getBacking();
                 if (typeof backing === 'function') {
-                    return Reflect.apply(backing, thisArg, argArray || []);
+                    return Reflect.apply(backing, thisArg, argArray || []);
                 }
             }
 
@@ -352,7 +382,7 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                     + result.error);
         },
         construct(_target: T, argArray?: any, newTarget?: any): any {
-            const args = [constructorCacheKey, ...(argArray || [])];
+            const args = [constructorCacheKey, ...sanitizeArgArray(argArray)];
             function getOriginal(getBacking: () => any) {
                 return Reflect.construct(getBacking(), argArray, newTarget);
             }
@@ -365,7 +395,7 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                 return result.result;
             }
 
-            // If no expectation matched this call, then attempt to call the backing if it is a function
+            // If no expectation matched this call, then attempt to construct the backing if it is a function
             if (params.getBacking) {
                 const backing = params.getBacking();
                 if (typeof backing === 'function') {
@@ -425,6 +455,6 @@ export function createVirtualMock<T extends object>(name: string, prototype: any
 }
 
 export function createBackedMock<T extends object | AnyFunction>(
-        name: string, backing: Partial<T> | T, prototype: any): Mock<T> {
+        name: string, backing: Partial<T> | T, prototype: any): Mock<T> {
     return mockFirst<T>(name, prototype, backing);
 }

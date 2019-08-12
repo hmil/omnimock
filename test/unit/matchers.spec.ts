@@ -29,33 +29,43 @@ import {
     verify,
     weakEquals,
     when,
-} from '../src';
-import { MatcherMetadata } from '../src/matcher';
-import { CatClass, Container } from './fixtures/classes';
+} from '../../src';
+import { MatcherMetadata } from '../../src/matcher';
+import { CatClass, Container } from '../fixtures/classes';
 
 describe('argument matchers', () => {
 
     describe('same', () => {
         it('matches only the exact same instance', () => {
             const myMock = mock<(arg: { name: string }) => boolean>('myMock');
-            const ref = { name: 'Jack' };
+            const ref = { name: 'Jack' };
 
             when(myMock(same(ref))).return(true);
 
             expect(() => instance(myMock)({ name: 'Jack' })).toThrow(/Unexpected/);
             expect(instance(myMock)(ref)).toBe(true);
         });
+
+        it('is equal only if it uses the same ref', () => {
+            const ref = { name: 'Jack' };
+            expect(match(same(ref), same({ name: 'Jack' }))).not.toBe(true);
+            expect(match(same(ref), same(ref))).toBe(true);
+        });
     });
 
     describe('weakEquals', () => {
         it('matches by weak equality', () => {
             const myMock = mock<(arg: string | number) => boolean>('myMock');
-
             when(myMock(weakEquals(''))).return(true);
-
             expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
             expect(instance(myMock)('')).toBe(true);
             expect(instance(myMock)(0)).toBe(true);
+        });
+
+        it('is equal only if if contents is strictly equal', () => {
+            expect(match(weakEquals(''), weakEquals(' '))).not.toBe(true);
+            expect(match(weakEquals(''), weakEquals(''))).toBe(true);
+            expect(match(weakEquals(''), weakEquals(0))).not.toBe(true);
         });
     });
 
@@ -74,6 +84,9 @@ describe('argument matchers', () => {
             when(myMock(anything())).return(true);
 
             expect(() => instance(myMock)()).toThrow(/Unexpected/);
+        });
+        it('matches itself', () => {
+            expect(match(anything(), anything())).toBe(true);
         });
     });
 
@@ -96,6 +109,10 @@ describe('argument matchers', () => {
 
             expect(() => instance(myMock)('foo' as any)).toThrow(/Unexpected/);
             expect(instance(myMock)(cat)).toBe(true);
+        });
+        it('matches itself if using the same ref', () => {
+            expect(match(instanceOf(Container), instanceOf(CatClass))).not.toBe(true);
+            expect(match(instanceOf(Container), instanceOf(Container))).toBe(true);
         });
     });
 
@@ -158,6 +175,23 @@ describe('argument matchers', () => {
             expect(() => instance(myMock)('12' as any)).toThrow(/Unexpected/);
             expect(instance(myMock)(['hello'])).toBe(true);
         });
+        it('matches matchers of the same type', () => {
+            expect(match(anyString(), anyNumber())).not.toBe(true);
+            expect(match(anyNumber(), anyString())).not.toBe(true);
+            expect(match(anyBoolean(), anyString())).not.toBe(true);
+            expect(match(anyObject(), anyString())).not.toBe(true);
+            expect(match(anySymbol(), anyString())).not.toBe(true);
+            expect(match(anyFunction(), anyString())).not.toBe(true);
+            expect(match(anyArray(), anyString())).not.toBe(true);
+
+            expect(match(anyString(), anyString())).toBe(true);
+            expect(match(anyNumber(), anyNumber())).toBe(true);
+            expect(match(anyBoolean(), anyBoolean())).toBe(true);
+            expect(match(anyObject(), anyObject())).toBe(true);
+            expect(match(anySymbol(), anySymbol())).toBe(true);
+            expect(match(anyFunction(), anyFunction())).toBe(true);
+            expect(match(anyArray(), anyArray())).toBe(true);
+        });
     });
 
     describe('anyOf', () => {
@@ -190,6 +224,15 @@ describe('argument matchers', () => {
 
             expect(() => instance(myMock)(20)).toThrow(/Unexpected.+20/);
         });
+
+        it('is equals if it matches the same things', () => {
+            expect(match(anyOf(), anyOf())).toBe(true);
+            expect(match(anyOf<any>(1, 'q'), anyOf<any>(1, 'q'))).toBe(true);
+            expect(match(anyOf(greaterThan(0), between(45, 55), smallerThan(100)),
+                         anyOf(greaterThan(0), between(45, 55), smallerThan(100))))
+                    .toBe(true);
+            expect(match(anyOf(greaterThan(0), between(45, 55), smallerThan(100)), anyOf(1))).not.toBe(true);
+        });
     });
 
     describe('allOf', () => {
@@ -219,6 +262,15 @@ describe('argument matchers', () => {
             when(myMock(allOf())).return(true);
 
             expect(instance(myMock)(20)).toBe(true);
+        });
+
+        it('is equals if it matches the same things', () => {
+            expect(match(allOf(), allOf())).toBe(true);
+            expect(match(allOf<any>(1, 'q'), allOf<any>(1, 'q'))).toBe(true);
+            expect(match(allOf(greaterThan(0), between(45, 55), smallerThan(100)),
+                         allOf(greaterThan(0), between(45, 55), smallerThan(100))))
+                    .toBe(true);
+            expect(match(allOf(greaterThan(0), between(45, 55), smallerThan(100)), allOf(1))).not.toBe(true);
         });
     });
 
@@ -325,6 +377,13 @@ describe('argument matchers', () => {
             expect(() => instance(myMock)([])).toThrow(/Unexpected/);
             expect(() => instance(myMock)(['one', 12])).toThrow(/Unexpected/);
             expect(instance(myMock)(['one', 10])).toBe(true);
+        });
+        it('is equal if the array match', () => {
+            expect(match(arrayEq([]), arrayEq([]))).toBe(true);
+            expect(match(arrayEq([1, 2, 3]), arrayEq([1, 2, 3]))).toBe(true);
+            expect(match(arrayEq([1, 2, 3]), arrayEq([]))).not.toBe(true);
+            expect(match(arrayEq([greaterThanOrEqual(12)]), arrayEq([greaterThanOrEqual(12)]))).toBe(true);
+            expect(match(arrayEq([greaterThanOrEqual(12)]), arrayEq([greaterThan(12)]))).not.toBe(true);
         });
     });
 

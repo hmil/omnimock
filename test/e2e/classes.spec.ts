@@ -1,5 +1,5 @@
-import { anyString, instance, mock, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { anyString, instance, mock, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('A mock based on a class', () => {
 

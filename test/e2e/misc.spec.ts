@@ -1,5 +1,5 @@
-import { instance, mock, mockInstance, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { instance, mock, mockInstance, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('JSON stringification', () => {
     it('does not cause unexpected access on virtual mocks', () => {
@@ -7,7 +7,7 @@ describe('JSON stringification', () => {
         expect(() => JSON.stringify(instance(catMock))).not.toThrow();
     });
     it('does not cause unexpected access on backed mocks', () => {
-        const catMock = mock(new CatClass('Olinka'));
+        const catMock = mock('catMock', new CatClass('Olinka'));
         expect(() => JSON.stringify(instance(catMock))).not.toThrow();
     });
     it('does not cause unexpected access on partial mocks', () => {

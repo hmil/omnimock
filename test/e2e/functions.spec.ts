@@ -1,4 +1,4 @@
-import { instance, mock, when } from '../src';
+import { instance, mock, when } from '../../src';
 
 describe('mocking functions', () => {
 

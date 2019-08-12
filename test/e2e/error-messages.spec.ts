@@ -1,5 +1,5 @@
-import { instance, mock, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { instance, mock, when } from '../../src';
+import { CatClass, CatsSecretPlan } from '../fixtures/classes';
 
 describe('error messages', () => {
     
@@ -13,6 +13,11 @@ describe('error messages', () => {
                 const catMock = mock('catMock', new CatClass('Olinka'));
                 when(catMock.purr()).return(undefined).never();
                 expect(() => instance(catMock).purr()).toThrow(/<catMock>.purr/);
+            });
+
+            it('uses "Anonymous class" for anonymous classes', () => {
+                const catMock = mock(class { purr() { return 'a'; }});
+                expect(() => instance(catMock).purr()).toThrow(/<anonymous class>.purr/);
             });
 
             it('uses "Object" for inline complete mocks', () => {
@@ -51,6 +56,21 @@ describe('error messages', () => {
             expect(() => instance(catMock).purr()).not.toThrow();
             expect(() => instance(catMock).purr()).toThrow(
                     /<CatClass>.purr\(\) was expected once but was received 2 times./);
+        });
+    });
+
+    describe('array indices', () => {
+        it('says which index was accessed', () => {
+            const m = mock<string[]>('arrayMock');
+            expect(() => instance(m)[3]).toThrow(/Unexpected property access: <arrayMock>\["3"\]/);
+        });
+    });
+
+    describe('symbols', () => {
+        it('specifies the symbol used', () => {
+            const catMock = mock(CatClass);
+            expect(() => instance(catMock)[CatsSecretPlan])
+                    .toThrow(/Unexpected property access: <CatClass>\[Symbol\(secret plan\)\]/);
         });
     });
 });

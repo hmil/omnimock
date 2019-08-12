@@ -6,7 +6,7 @@ export function formatArgArray(args: unknown[] | undefined) {
 }
 
 const IDENTIFIER_RX = /^[$A-Z_][0-9A-Z_$]*$/i;
-export function humanReadableObjectPropertyAccess(p: PropertyKey) {
+export function formatPropertyAccess(p: PropertyKey) {
     if (typeof p === 'string') {
         if (IDENTIFIER_RX.test(p)) {
             return `.${p}`;

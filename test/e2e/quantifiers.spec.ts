@@ -1,7 +1,12 @@
-import { instance, mock, verify, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { instance, mock, verify, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('Expectation quantifiers', () => {
+
+    it('needs a behavior defined first', () => {
+        const catMock = mock(CatClass);
+        expect(() => when(catMock.food).once()).toThrow(/No behavior defined/);
+    });
 
     describe('.atLeastOnce()', () => {
         it('asserts at least one call', () => {

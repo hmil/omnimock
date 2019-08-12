@@ -1,5 +1,5 @@
-import { instance, mock, reset, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { instance, mock, reset, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('reset()', () => {
 

@@ -16,7 +16,10 @@ export interface Tag {
     siblings: Tag[];
 }
 
+export const CatsSecretPlan = Symbol('secret plan');
+
 export class CatClass extends Container {
+    public [CatsSecretPlan] = 'destroy the internet';
 
     public tag: Tag = {
         chip: {

@@ -1,5 +1,5 @@
-import { instance, mock, when } from '../src';
-import { CatClass, Container } from './fixtures/classes';
+import { instance, mock, when } from '../../src';
+import { CatClass, Container } from '../fixtures/classes';
 
 describe('Instance backed mocks', () => {
 

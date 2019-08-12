@@ -24,7 +24,7 @@ import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording
  * the most common use cases.
  * Only use this function for edge cases where the `mock` function is not sufficient.
  */
-export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
+export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
     prototype?: any,
     backing?: Partial<T> | T
 }): Mock<T> {
@@ -52,9 +52,9 @@ export function mock<T extends AnyFunction>(name: string, backing: T): Mock<T>; 
 export function mock<T extends object>(name: string, backing: Partial<T>): Mock<T>; // 4
 export function mock<T extends AnyFunction | object>(
         nameOrTarget: string | ConstructorType<T>, 
-        backing?: Partial<T> | T
+        backing?: Partial<T> | T
 ): Mock<T> {
-    const name = (typeof nameOrTarget !== 'string') ? inferMockName(nameOrTarget) : nameOrTarget;
+    const name = (typeof nameOrTarget !== 'string') ? nameOrTarget.name || 'anonymous class' : nameOrTarget;
     if (backing !== undefined) { // Named backed mock (form 3 or 4)
         const prototype = typeof backing === 'function' ? backing.prototype : backing.constructor.prototype;
         return createMock<T>(name, { backing, prototype });
@@ -63,17 +63,6 @@ export function mock<T extends AnyFunction | object>(
         return createMock<T>(name, { prototype: nameOrTarget.prototype });
     }
     return createMock<T>(name); // Named virtual mock (form 1)
-}
-
-function inferMockName(target: AnyFunction | object): string {
-    switch (typeof target) {
-        case 'function':
-            return target.name || 'Function';
-        case 'object':
-            return target.constructor.name;
-        default:
-            return 'unknown';
-    }
 }
 
 /**
@@ -87,7 +76,7 @@ export function mockInstance<T extends AnyFunction>(name: string, backing: T, co
 export function mockInstance<T extends object>(name: string, backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(
         nameOrTarget: string | ConstructorType<T> | T, 
-        backing?: Partial<T> | T, 
+        backing?: Partial<T> | T, 
         config?: (m: Mock<T>) => void): T {
     // TypeScript has a hard time following here with all the overloads.
     const builder = mock<T>(nameOrTarget as string, backing as T);

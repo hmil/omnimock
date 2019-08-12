@@ -670,7 +670,7 @@ export function match(expected: unknown, actual: unknown): true | string {
         const expectedMatcher = getMetadata(expected, MATCHER_KEY);
         if (isMatcher(actual)) {
             const actualMatcher = getMetadata(actual, MATCHER_KEY);
-            return expectedMatcher.name === actualMatcher.name && expectedMatcher.equals(actualMatcher) || 
+            return expectedMatcher.name === actualMatcher.name && expectedMatcher.equals(actualMatcher) || 
                     `matcher ${expectedMatcher.name} differs from ${actualMatcher.name}`;
         }
         return expectedMatcher.match(actual);
