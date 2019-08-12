@@ -20,7 +20,6 @@ import {
     instanceOf,
     match,
     matching,
-    MatchingLogic,
     mock,
     not,
     objectEq,
@@ -31,6 +30,7 @@ import {
     weakEquals,
     when,
 } from '../src';
+import { MatcherMetadata } from '../src/matcher';
 import { CatClass, Container } from './fixtures/classes';
 
 describe('argument matchers', () => {
@@ -439,9 +439,9 @@ describe('argument matchers', () => {
 
     describe('match', () => {
         it('uses the matcher logic if present', () => {
-            const mockMatcher = mock<MatchingLogic<string>>('myMock');
-            const matcher = createMatcher(instance(mockMatcher), 'mock matcher');
-            when(mockMatcher('hello')).return(true).once();
+            const mockMatcher = mock<MatcherMetadata<any>>('myMock');
+            const matcher = createMatcher(instance(mockMatcher));
+            when(mockMatcher.match('hello')).return(true).once();
 
             expect(match(matcher, 'hello')).toBe(true);
 

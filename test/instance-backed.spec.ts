@@ -1,11 +1,11 @@
-import { instance, mock } from '../src';
+import { instance, mock, when } from '../src';
 import { CatClass, Container } from './fixtures/classes';
 
 describe('Instance backed mocks', () => {
 
     it('preserves instanceof property', () => {
-        const catMock = mock(new CatClass('Olinka'));
-        const containerMock = mock(new Container());
+        const catMock = mock('catMock', new CatClass('Olinka'));
+        const containerMock = mock('containerMock', new Container());
 
         expect(instance(catMock)).toBeInstanceOf(CatClass);
         expect(instance(catMock)).toBeInstanceOf(Container);
@@ -15,7 +15,7 @@ describe('Instance backed mocks', () => {
 
     it('can be enumerated in a loop', () => {
         const original = new CatClass('Olinka');
-        const catMock = mock(new CatClass('Olinka'));
+        const catMock = mock('catMock', new CatClass('Olinka'));
 
         const seenProperties = [];
         const expectedProperties = [];
@@ -31,7 +31,7 @@ describe('Instance backed mocks', () => {
 
     it('can inspect the prototype', () => {
         const original = new CatClass('Olinka');
-        const catMock = mock(original);
+        const catMock = mock('catMock', original);
 
         const seenProperties = [];
         const expectedProperties = [];

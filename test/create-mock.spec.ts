@@ -1,4 +1,4 @@
-import { instance, mock, Mock, when, mockInstance } from '../src';
+import { anyString, instance, Mock, mock, mockInstance, when } from '../src';
 import { CatClass } from './fixtures/classes';
 
 describe('ways to create a mock', () => {
@@ -12,26 +12,11 @@ describe('ways to create a mock', () => {
         verifyCatMock(m);
     });
 
-    it('create a backed mock from a complete type', () => {
-        const backing = new CatClass('Olinka');
-        const m = mock(backing);
-        verifyCatMock(m);
-    });
-    
     it('create a backed mock from a partial type', () => {
         const m = mock<CatClass>('partialCat', {
             food: 'oreos'
         });
         verifyCatMock(m);
-    });
-
-    it('create a backed mock from a function', () => {
-        function charCode(s: string): number {
-            return s.charCodeAt(0);
-        }
-        const m = mock(charCode);
-        when(m('a')).return(42);
-        expect(instance(m)('a')).toBe(42);
     });
 
     it('create a backed mock from a function with a custom name', () => {
@@ -41,6 +26,13 @@ describe('ways to create a mock', () => {
         const m = mock('mockCharCode', charCode);
         when(m('a')).return(42);
         expect(instance(m)('a')).toBe(42);
+    });
+
+    it('create the mock of a constructor', () => {
+        const m = mock<typeof CatClass>('CatCtr', CatClass);
+        when(new m(anyString()).food).useValue('chilli');
+
+        expect(new (instance(m))('Olinka').food).toBe('chilli');
     });
 });
 
@@ -60,13 +52,6 @@ describe('ways to create a mock instance', () => {
         const m = mockInstance(CatClass);
         expect(() => m.purr()).toThrow(/Unexpected/);
     });
-
-    it('create a backed mock from a complete type', () => {
-        const backing = new CatClass('Olinka');
-        const m = mockInstance(backing);
-        expect(() => m.purr()).not.toThrow(/Unexpected/);
-        expect(m.name).toBe('Olinka');
-    });
     
     it('create a backed mock from a partial type', () => {
         const m = mockInstance<CatClass>('partialCat', {
@@ -76,19 +61,11 @@ describe('ways to create a mock instance', () => {
         expect(m.food).toBe('oreos');
     });
 
-    it('create a backed mock from a function', () => {
-        function charCode(s: string): number {
-            return s.charCodeAt(0);
-        }
-        const m = mockInstance(charCode);
-        expect(m('a')).toBe(42);
-    });
-
     it('create a backed mock from a function with a custom name', () => {
         function charCode(s: string): number {
             return s.charCodeAt(0);
         }
         const m = mockInstance('mockCharCode', charCode);
-        expect(m('a')).toBe(42);
+        expect(m('a')).toBe(97);
     });
 });

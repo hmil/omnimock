@@ -3,8 +3,7 @@ import { match } from './matchers';
 import { Range, ZERO_OR_MORE } from './range';
 
 interface RuntimeContext<Args, Ret> {
-    getOriginalContext: () => object | undefined;
-    getOriginalTarget: () => Ret;
+    getOriginalTarget?: () => Ret;
     context: unknown;
     args: Args;
 }

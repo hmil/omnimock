@@ -6,11 +6,14 @@ export function formatArgArray(args: unknown[] | undefined) {
 }
 
 const IDENTIFIER_RX = /^[$A-Z_][0-9A-Z_$]*$/i;
-export function humanReadableObjectPropertyAccess(name: string) {
-    if (IDENTIFIER_RX.test(name)) {
-        return `.${name}`;
+export function humanReadableObjectPropertyAccess(p: PropertyKey) {
+    if (typeof p === 'string') {
+        if (IDENTIFIER_RX.test(p)) {
+            return `.${p}`;
+        }
+        return `["${p}"]`;
     }
-    return `["${name}"]`;
+    return `[${String(p)}]`;
 }
 
 export function fmt(strings: TemplateStringsArray, ...values: unknown[]): string {

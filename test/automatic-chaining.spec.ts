@@ -26,7 +26,7 @@ describe('automatic chaining', () => {
     });
 
     it('works with getters and pass-through', () => {
-        const catMock = mock(new CatClass('tommy'));
+        const catMock = mock('catMock', new CatClass('tommy'));
         when(catMock.tag.chip.id).useActual();
         expect(instance(catMock).tag.chip.id).toBe(123);
     });
@@ -38,7 +38,7 @@ describe('automatic chaining', () => {
     });
 
     it('works with methods and pass-through', async () => {
-        const catMock = mock(new CatClass('tommy'));
+        const catMock = mock('catMock', new CatClass('tommy'));
         when(catMock.getTag(1).manufacturer.fetch()).callThrough();
         expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('nokia');
     });
@@ -77,6 +77,8 @@ describe('automatic chaining', () => {
         when(catMock.getTag(greaterThan(10)).manufacturer.fetch()).resolve('hitachi');
 
         expect(instance(catMock).getTag(11).chip.id).toBe(12);
+
+        // TODO: Revize matchers behavior such that identical matchers can be matched
         expect(await instance(catMock).getTag(11).manufacturer.fetch()).toBe('hitachi');
         expect(instance(catMock).getTag(7)).toBe(realCat.tag);
         expect(instance(catMock).getTag(4).chip.id).toBe(3);

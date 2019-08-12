@@ -53,14 +53,13 @@ describe('partial mocks', () => {
         expect(instance(catMock).purr()).toBe('hello');
     });
 
-    it('through-mocking of unknown values yields undefined', () => {
-        // TODO: Should this instead throw an Error?
+    it('through-mocking of unknown values is an error', () => {
         const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
         });
         when(catMock.food).useActual();
-        expect(instance(catMock).food).toBeUndefined();
+        expect(() => instance(catMock).food).toThrow(/Attempted to `useActual`/);
     });
 });

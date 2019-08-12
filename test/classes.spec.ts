@@ -67,7 +67,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can access base property of instance backed mocks', () => {
-            const concreteMock = mock(new CatClass('Olinka'));
+            const concreteMock = mock('concreteMock', new CatClass('Olinka'));
             
             when(concreteMock.color).useActual();
             when(concreteMock.name).useActual();
@@ -80,13 +80,13 @@ describe('A mock based on a class', () => {
             expect(concrete.food).toBe('oreos');
         });
 
+        // TODO: Clarify this case
         xit('is undefined behavior to use actual on a virtual mock', () => {
             const virtualMock = mock(CatClass);
             when(virtualMock.name).useActual();
             expect(virtualMock.name).toBeUndefined();
         });
     });
-    
 
     describe('method calls', () => {
         it('can mock function calls', () => {
@@ -102,9 +102,8 @@ describe('A mock based on a class', () => {
             expect(cat.receive('sparta')).toBe('This is sparta');
         });
 
-
         it('can call through instance backed mocks', () => {
-            const concreteMock = mock(new CatClass('Olinka'));
+            const concreteMock = mock('concreteMock', new CatClass('Olinka'));
             const virtualMock = mock(CatClass);
 
             when(concreteMock.purr()).callThrough();
@@ -116,7 +115,7 @@ describe('A mock based on a class', () => {
 
             expect(concrete.greet('jack')).toBe('Hello jack');
             expect(concrete.purr()).toBe('Rrrr Olinka');
-            expect(() => instance(virtualMock).purr()).toThrow(/Cannot call/);
+            expect(() => instance(virtualMock).purr()).toThrow(/Attempted to `callThrough`/);
         });
     });
 });
