@@ -10,13 +10,21 @@ describe('ways to create a mock', () => {
     it('create a virtual mock from a constructor', () => {
         const m = mock(CatClass);
         verifyCatMock(m);
+        expect(instance(m)).toBeInstanceOf(CatClass);
     });
 
     it('create a backed mock from a partial type', () => {
-        const m = mock<CatClass>('partialCat', {
+        const m = mock<CatClass>('partialCat', new CatClass('Olinka'));
+        verifyCatMock(m);
+        expect(instance(m)).toBeInstanceOf(CatClass);
+    });
+
+    it('create a backed mock from a partial type and constructor', () => {
+        const m = mock(CatClass, {
             food: 'oreos'
         });
         verifyCatMock(m);
+        expect(instance(m)).toBeInstanceOf(CatClass);
     });
 
     it('create a backed mock from a function with a custom name', () => {
@@ -75,6 +83,15 @@ describe('ways to create a mock instance', () => {
         });
         expect(() => m.purr()).toThrow(/Unexpected/);
         expect(m.food).toBe('oreos');
+    });
+    
+    it('create a backed mock from a partial type and constructor', () => {
+        const m = mockInstance(CatClass, {
+            food: 'oreos'
+        });
+        expect(() => m.purr()).toThrow(/Unexpected/);
+        expect(m.food).toBe('oreos');
+        expect(m).toBeInstanceOf(CatClass);
     });
 
     it('create a backed mock from a function with a custom name', () => {

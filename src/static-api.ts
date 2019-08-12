@@ -56,6 +56,11 @@ export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
  *     foo: 'bar'
  * });
  * 
+ * // Create a backed mock from a constructor and partial definition (supports instanceof)
+ * mock(MyObjectClass, {
+ *     foo: 'bar'
+ * });
+ * 
  * // Create a backed mock of a function
  * mock('myFunction', (s: string) => s.charCodeAt(1));
  * 
@@ -65,7 +70,7 @@ export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
  * ```
  */
 export function mock<T>(name: string): Mock<T>;                                     // 1
-export function mock<T>(ctr: ConstructorType<T>): Mock<T>;                          // 2
+export function mock<T>(ctr: ConstructorType<T>, backing?: Partial<T>): Mock<T>;    // 2
 export function mock<T extends AnyFunction>(name: string, backing: T): Mock<T>;     // 3
 export function mock<T extends object>(name: string, backing: Partial<T>): Mock<T>; // 4
 export function mock<T extends AnyFunction | object>(
@@ -73,12 +78,12 @@ export function mock<T extends AnyFunction | object>(
         backing?: Partial<T> | T
 ): Mock<T> {
     const name = (typeof nameOrTarget !== 'string') ? nameOrTarget.name || 'anonymous class' : nameOrTarget;
+    if (typeof nameOrTarget === 'function') { // constructor-based mock (form 2)
+        return createMock<T>(name, { prototype: nameOrTarget.prototype, backing });
+    }
     if (backing !== undefined) { // Named backed mock (form 3 or 4)
         const prototype = typeof backing === 'function' ? backing.prototype : backing.constructor.prototype;
         return createMock<T>(name, { backing, prototype });
-    }
-    if (typeof nameOrTarget === 'function') { // Constructor-based virtual mock (form 2)
-        return createMock<T>(name, { prototype: nameOrTarget.prototype });
     }
     return createMock<T>(name); // Named virtual mock (form 1)
 }
@@ -89,7 +94,7 @@ export function mock<T extends AnyFunction | object>(
  * Useful when you need an object but you don't expect it to be used.
  */
 export function mockInstance<T>(name: string, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T>(ctr: ConstructorType<T>): Mock<T>;
+export function mockInstance<T>(ctr: ConstructorType<T>, backing?: Partial<T>, config?: (m: Mock<T>) => void): Mock<T>;
 export function mockInstance<T extends AnyFunction>(name: string, backing: T, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends object>(name: string, backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(

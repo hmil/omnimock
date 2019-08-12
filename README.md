@@ -223,6 +223,16 @@ const assemblyServiceMock = mock<AssemblyService>('assemblyServiceMock', {
 });
 ```
 
+If you have access to the class constructor, use this form instead. It supports `instanceof` and prototype-based operations.
+
+```ts
+const assemblyServiceMock = mock(AssemblyService, {
+    version: 2
+});
+```
+
+Note that this does not work with abstract classes and interfaces.
+
 A mock created this way will accept any get or set operation on the specified members, but will throw an error if one attempts to get an omitted property.
 
 ```ts
@@ -291,12 +301,18 @@ A common pattern is to provide a return value which you are not sure if it is us
 
 ```ts
 when(codex.getCard('Starlight')).return(mockInstance('fake card'));
+// Or better, if you have access to a constructor this is more accurate:
+when(codex.getCard('Starlight')).return(mockInstance(MtgCard));
 ```
 
 Then, you keep adding the necessary attributes as you discover them. For instance, I can write the following if I get the error `Unexpected property access: <fake card>.id`.
 
 ```ts
 when(codex.getCard('Starlight')).return(mockInstance('fake card', {
+    id: 1038
+}));
+// Or:
+when(codex.getCard('Starlight')).return(mockInstance(MtgCard, {
     id: 1038
 }));
 ```
