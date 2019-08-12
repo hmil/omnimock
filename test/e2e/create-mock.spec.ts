@@ -101,4 +101,14 @@ describe('ways to create a mock instance', () => {
         const m = mockInstance('mockCharCode', charCode);
         expect(m('a')).toBe(97);
     });
+
+    it('can customize behavior with a callback', () => {
+        const m = mockInstance<CatClass>('catMock', undefined, setter => {
+            when(setter.color).useValue('green');
+            when(setter.tag.chip.id).useValue(123);
+        });
+
+        expect(m.color).toBe('green');
+        expect(m.tag.chip.id).toBe(123);
+    });
 });

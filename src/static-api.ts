@@ -93,8 +93,8 @@ export function mock<T extends AnyFunction | object>(
  * 
  * Useful when you need an object but you don't expect it to be used.
  */
-export function mockInstance<T>(name: string, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T>(ctr: ConstructorType<T>, backing?: Partial<T>, config?: (m: Mock<T>) => void): Mock<T>;
+export function mockInstance<T>(name: string): T;
+export function mockInstance<T>(ctr: ConstructorType<T>, backing?: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction>(name: string, backing: T, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends object>(name: string, backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(
