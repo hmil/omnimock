@@ -1,4 +1,4 @@
-import { instance, mock, verify, when } from '../../src';
+import { instance, mock, verify, when, mockInstance } from '../../src';
 import { CatClass } from '../fixtures/classes';
 
 describe('Expectation quantifiers', () => {
@@ -124,6 +124,49 @@ describe('Expectation quantifiers', () => {
             expect(() => verify(catMock)).not.toThrow();
             expect(() => instance(catMock).color).toThrow();
             expect(() => verify(catMock)).toThrow();
+        });
+    });
+
+    describe('verification', () => {
+        it('can verify a whole mock', () => {
+            const catMock = mock(CatClass);
+
+            // This mock is used by the catMock but it is not part of that mock.
+            // The expectations set on that mock should not be verified.
+            const chipMock = mock<CatClass['tag']['chip']>('chipMock');
+            when(chipMock.id).useValue(112).atLeastOnce();
+
+            when(catMock.color).useValue('green').atLeastOnce();
+            when(catMock.getTag(12).chip).useValue(instance(chipMock));
+            when(catMock.getTag(22).chip).useValue(instance(chipMock)).atLeastOnce();
+
+            try {
+                verify(catMock);
+                fail('Should have thrown');
+            } catch (e) {
+                expect(e.message).toContain('2 unsatisfied');
+                expect(e.message).toContain('<CatClass>.color');
+                expect(e.message).toContain('<CatClass>.getTag(22).chip');
+            }
+        });
+
+        it('can verify a subset of a mock', () => {
+            const catMock = mock(CatClass);
+
+            const chipMock = mock<CatClass['tag']['chip']>('chipMock');
+            when(chipMock.id).useValue(112).atLeastOnce();
+
+            when(catMock.color).useValue('green').atLeastOnce();
+            when(catMock.getTag(12).chip).useValue(instance(chipMock));
+            when(catMock.getTag(22).chip).useValue(instance(chipMock)).atLeastOnce();
+
+            try {
+                verify(catMock.getTag(22));
+                fail('Should have thrown');
+            } catch (e) {
+                expect(e.message).toContain('1 unsatisfied');
+                expect(e.message).toContain('<CatClass>.getTag(22).chip');
+            }
         });
     });
 });
