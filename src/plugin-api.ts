@@ -22,9 +22,7 @@ import { AnyRecording, RecordedArguments, RecordedType, RECORDING_METADATA_KEY, 
 export { OmniMockError } from './error';
 export * from './range';
 export {
-    GetterRecording,
-    IfMethod,
-    MethodCallRecording,
+    AnyRecording,
     RecordedArguments,
     RecordedType,
     UnknownRecording

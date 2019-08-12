@@ -2,9 +2,8 @@ import { formatArgArray } from './formatting';
 import { match } from './matchers';
 import { Range, ZERO_OR_MORE } from './range';
 
-interface RuntimeContext<Args, Ret> {
-    getOriginalContext: () => object | undefined;
-    getOriginalTarget: () => Ret;
+export interface RuntimeContext<Args, Ret> {
+    getOriginalTarget?: () => Ret;
     context: unknown;
     args: Args;
 }
@@ -111,41 +110,5 @@ export class MockExpectations<Args extends unknown[] | undefined, Ret> {
             }
         }
         return null;
-    }
-}
-
-/**
- * Gathers all expectations set within a context.
- */
-export class ExpectationsRegistry {
-
-    /**
-     * Keep the order of insertion to help debug matching issues
-     */
-    private allExpectations: Array<MockExpectations<unknown[] | undefined, unknown>> = [];
-
-    addExpectations(expectation: MockExpectations<unknown[] | undefined, unknown>) {
-        this.allExpectations.push(expectation);
-    }
-
-    toString(): string {
-        return this.allExpectations.filter(e => e.size > 0).map(e => `\n- ${e.path}:\n${e.toString()}`).join('\n');
-    }
-
-    verify(): void {
-        const unsatisfied = this.allExpectations
-                .map(e => e.getAllUnsatisfied().map(expectation => expectation.toString()))
-                .filter(e => e.length > 0)
-                .reduce((prev, curr) => prev.concat(curr), []);
-        if (unsatisfied.length > 0) {
-            throw new Error(`There are ${unsatisfied.length} unsatisfied expectations:\n` +
-                    unsatisfied.map((s, idx) => `${idx}. ${s.toString()}`).join('\n'));
-        }
-    }
-
-    reset(): void {
-        this.allExpectations.forEach(e => {
-            e.reset();
-        });
     }
 }

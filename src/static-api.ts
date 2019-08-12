@@ -6,7 +6,6 @@ import { OmniMockError } from './error';
 import { GetMetadata, hasMetadata } from './metadata';
 import {
     createBackedMock,
-    createClassOrFunctionMock,
     createVirtualMock,
     debugMock,
     getMockInstance,
@@ -19,42 +18,74 @@ import { Recording, RECORDING_METADATA_KEY, UnknownRecording } from './recording
 
 
 /**
+ * Manually create a mock.
+ * 
+ * The `mock` function should be preferred as it provides a lean interface to create mocks for
+ * the most common use cases.
+ * Only use this function for edge cases where the `mock` function is not sufficient.
+ */
+export function createMock<T extends object | AnyFunction>(name: string, cfg?: {
+    prototype?: any,
+    backing?: Partial<T> | T
+}): Mock<T> {
+    const config = cfg == null ? {} : cfg;
+    const prototype = config.prototype == null ? null : config.prototype;
+    if (config.backing !== undefined) {
+        return createBackedMock<T>(name, config.backing, prototype || config.backing.constructor.prototype);
+    }
+
+    return createVirtualMock<T>(name, prototype);
+}
+
+/**
  * Creates a mock for a class, an interface or an object instance.
+ * 
+ * Remember to use `instance()` before feeding your mock to your tested code.
  * 
  * @example
  * 
  * ```
- * // Mock an interface
- * const mockedInterface = mock<SomeInterface>()
+ * // Create a virtual mock
+ * mock<SomeType>('someTypeMock')
  * 
- * // Passing a name helps generate better error messages
- * const mockedInterface = mock<SomeInterface>('someInterface')
+ * // Create a backed mock of a class
+ * mock('myClassMock', new MyClass());
  * 
- * // Mock a class
- * const mockedClass = mock(MyClass)
+ * // Create a backed mock from a partial object definition
+ * mock<MyObjectType>('myObject', {
+ *     foo: 'bar'
+ * });
  * 
- * // Construct and mock a class (allows using `.andCallThrough()`)
- * const mockedClass = mock(MyClass, ['parameters', 'of the', 'constructor'])
+ * // Create a backed mock from a constructor and partial definition (supports instanceof)
+ * mock(MyObjectClass, {
+ *     foo: 'bar'
+ * });
  * 
- * // Mock an object (allows `.andCallThrough()`)
- * const mockedObject = mock(someObject)
+ * // Create a backed mock of a function
+ * mock('myFunction', (s: string) => s.charCodeAt(1));
+ * 
+ * // Creates a virtual mock with the name and type inferred from a constructor
+ * // Warning: Does not work with abstract classes and interfaces!
+ * mock(SomeClass)
  * ```
  */
-export function mock<T>(name?: string): Mock<T>;
-export function mock<T>(ctr: ConstructorType<T>): Mock<T>;
-export function mock<T extends AnyFunction>(backing: T): Mock<T>;
-export function mock<T extends object>(backing: Partial<T>): Mock<T>;
-export function mock<T extends AnyFunction | object>(toMock: string | Partial<T> | undefined): Mock<T> {
-    if (toMock === undefined) {
-        toMock = 'virtual mock';
+export function mock<T>(name: string): Mock<T>;                                     // 1
+export function mock<T>(ctr: ConstructorType<T>, backing?: Partial<T>): Mock<T>;    // 2
+export function mock<T extends AnyFunction>(name: string, backing: T): Mock<T>;     // 3
+export function mock<T extends object>(name: string, backing: Partial<T>): Mock<T>; // 4
+export function mock<T extends AnyFunction | object>(
+        nameOrTarget: string | ConstructorType<T>, 
+        backing?: Partial<T> | T
+): Mock<T> {
+    const name = (typeof nameOrTarget !== 'string') ? nameOrTarget.name || 'anonymous class' : nameOrTarget;
+    if (typeof nameOrTarget === 'function') { // constructor-based mock (form 2)
+        return createMock<T>(name, { prototype: nameOrTarget.prototype, backing });
     }
-    if (typeof toMock === 'string') {
-        return createVirtualMock(toMock);
+    if (backing !== undefined) { // Named backed mock (form 3 or 4)
+        const prototype = typeof backing === 'function' ? backing.prototype : backing.constructor.prototype;
+        return createMock<T>(name, { backing, prototype });
     }
-    if (typeof toMock === 'function') {
-        return createClassOrFunctionMock(toMock as AnyFunction);
-    }
-    return createBackedMock(toMock);
+    return createMock<T>(name); // Named virtual mock (form 1)
 }
 
 /**
@@ -62,12 +93,16 @@ export function mock<T extends AnyFunction | object>(toMock: string | Partial<T>
  * 
  * Useful when you need an object but you don't expect it to be used.
  */
-export function mockInstance<T>(name?: string, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends AnyFunction>(backing: T, config?: (m: Mock<T>) => void): T;
-export function mockInstance<T extends object>(backing: Partial<T>, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T>(name: string): T;
+export function mockInstance<T>(ctr: ConstructorType<T>, backing?: Partial<T>, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends AnyFunction>(name: string, backing: T, config?: (m: Mock<T>) => void): T;
+export function mockInstance<T extends object>(name: string, backing: Partial<T>, config?: (m: Mock<T>) => void): T;
 export function mockInstance<T extends AnyFunction | object>(
-        backingOrName: string | Partial<T> | undefined, config?: (m: Mock<T>) => void): T {
-    const builder = mock<T>((backingOrName || {}) as T);
+        nameOrTarget: string | ConstructorType<T> | T, 
+        backing?: Partial<T> | T, 
+        config?: (m: Mock<T>) => void): T {
+    // TypeScript has a hard time following here with all the overloads.
+    const builder = mock<T>(nameOrTarget as string, backing as T);
     if (config) {
         config(builder);
     }
@@ -124,9 +159,7 @@ export function verify(t: Mock<unknown>): void {
 /**
  * Resets all expected calls on this mock.
  */
-export function reset(t: Mock<unknown>): void;
-export function reset<T extends Recording<any>>(t: T): void;
-export function reset(t: Recording<any> | Mock<unknown>): void {
+export function reset(t: Mock<unknown>): void {
     return resetMock(t);
 }
 

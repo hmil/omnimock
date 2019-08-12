@@ -2,7 +2,7 @@
  * Stores metadata safely on a namespace on objects
  */
 
-export const METADATA_KEY = '__OMNIMOCK__';
+export const METADATA_KEY = Symbol('__OMNIMOCK__');
 
 export interface WithMetadata<Key extends string, T> {
     [METADATA_KEY]: {

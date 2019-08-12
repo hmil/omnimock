@@ -1,17 +1,7 @@
-import { anyString, instance, mock, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { anyString, instance, mock, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('A mock based on a class', () => {
-
-    it('can create a virtual mock', () => {
-        const catMock = mock<CatClass>();
-        expect(instance(catMock)).not.toBeInstanceOf(CatClass);
-    });
-
-    it('can create a constructor-backed mock', () => {
-        const catMock = mock(CatClass);
-        expect(instance(catMock)).toBeInstanceOf(CatClass);
-    });
 
     it('multiple mocks based on the same constructor don\'t clash', () => {
         const catMock1 = mock(CatClass);
@@ -25,7 +15,7 @@ describe('A mock based on a class', () => {
 
     describe('property access', () => {
         it('can mock property access', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
 
             const mockPurr = jest.fn(() => 'miaou');
@@ -42,7 +32,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can mock property access in getter style', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             const mockPurr = jest.fn(() => 'miaou');
@@ -59,7 +49,7 @@ describe('A mock based on a class', () => {
         });
     
         it('forwards errors in getters', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
      
             when(catMock.food).useGetter(() => { throw new Error('not hungry'); });
@@ -68,7 +58,7 @@ describe('A mock based on a class', () => {
         });
     
         it('prevents unmocked property access', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             expect(() => cat.name).toThrow(/Unexpected/);
@@ -77,7 +67,7 @@ describe('A mock based on a class', () => {
         });
 
         it('can access base property of instance backed mocks', () => {
-            const concreteMock = mock(new CatClass('Olinka'));
+            const concreteMock = mock('concreteMock', new CatClass('Olinka'));
             
             when(concreteMock.color).useActual();
             when(concreteMock.name).useActual();
@@ -89,18 +79,11 @@ describe('A mock based on a class', () => {
             expect(concrete.name).toBe('Olinka');
             expect(concrete.food).toBe('oreos');
         });
-
-        xit('is undefined behavior to use actual on a virtual mock', () => {
-            const virtualMock = mock<CatClass>();
-            when(virtualMock.name).useActual();
-            expect(virtualMock.name).toBeUndefined();
-        });
     });
-    
 
     describe('method calls', () => {
         it('can mock function calls', () => {
-            const catMock = mock<CatClass>();
+            const catMock = mock(CatClass);
             const cat = instance(catMock);
     
             when(catMock.placeIn({} as any)).return('placed');
@@ -112,10 +95,9 @@ describe('A mock based on a class', () => {
             expect(cat.receive('sparta')).toBe('This is sparta');
         });
 
-
         it('can call through instance backed mocks', () => {
-            const concreteMock = mock(new CatClass('Olinka'));
-            const virtualMock = mock<CatClass>();
+            const concreteMock = mock('concreteMock', new CatClass('Olinka'));
+            const virtualMock = mock(CatClass);
 
             when(concreteMock.purr()).callThrough();
             when(concreteMock.greet(anyString())).callThrough();
@@ -126,7 +108,7 @@ describe('A mock based on a class', () => {
 
             expect(concrete.greet('jack')).toBe('Hello jack');
             expect(concrete.purr()).toBe('Rrrr Olinka');
-            expect(() => instance(virtualMock).purr()).toThrow(/Cannot call/);
+            expect(() => instance(virtualMock).purr()).toThrow(/Attempted to `callThrough`/);
         });
     });
 });

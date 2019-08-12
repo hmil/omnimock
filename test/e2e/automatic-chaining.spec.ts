@@ -1,12 +1,12 @@
-import { greaterThan, instance, mock, verify, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { greaterThan, instance, mock, verify, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('manual chaining', () => {
     it('is very verbose', () => {
-        const catMock = mock<CatClass>();
-        const tagMock = mock<CatClass['tag']>();
+        const catMock = mock(CatClass);
+        const tagMock = mock<CatClass['tag']>('tag');
         const tag = instance(tagMock);
-        const chipMock = mock<typeof tag['chip']>();
+        const chipMock = mock<typeof tag['chip']>('chip');
         const chip = instance(chipMock);
 
         when(catMock.tag).useValue(tag);
@@ -20,25 +20,25 @@ describe('manual chaining', () => {
 describe('automatic chaining', () => {
 
     it('works with getters and fake', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         when(catMock.tag.chip.id).useValue(456);
         expect(instance(catMock).tag.chip.id).toBe(456);
     });
 
     it('works with getters and pass-through', () => {
-        const catMock = mock(new CatClass('tommy'));
+        const catMock = mock('catMock', new CatClass('tommy'));
         when(catMock.tag.chip.id).useActual();
         expect(instance(catMock).tag.chip.id).toBe(123);
     });
 
     it('works with methods and fake', async () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         when(catMock.getTag(1).manufacturer.fetch()).call(async () => 'I <3 chaining');
         expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('I <3 chaining');
     });
 
     it('works with methods and pass-through', async () => {
-        const catMock = mock(new CatClass('tommy'));
+        const catMock = mock('catMock', new CatClass('tommy'));
         when(catMock.getTag(1).manufacturer.fetch()).callThrough();
         expect(await instance(catMock).getTag(1).manufacturer.fetch()).toBe('nokia');
     });
@@ -52,7 +52,7 @@ describe('automatic chaining', () => {
     });
 
     it('catches unexpected accesses', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
 
         // Actually assert the chip path
         when(catMock.tag.chip.id).useValue(123);
@@ -64,7 +64,7 @@ describe('automatic chaining', () => {
     });
 
     it('follows the rules of cascading matchers', async () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
         const realCat = new CatClass('Olinka');
 
         // Automatic chaining will create an expectation for getTag(> 10)
@@ -77,13 +77,15 @@ describe('automatic chaining', () => {
         when(catMock.getTag(greaterThan(10)).manufacturer.fetch()).resolve('hitachi');
 
         expect(instance(catMock).getTag(11).chip.id).toBe(12);
+
+        // TODO: Revize matchers behavior such that identical matchers can be matched
         expect(await instance(catMock).getTag(11).manufacturer.fetch()).toBe('hitachi');
         expect(instance(catMock).getTag(7)).toBe(realCat.tag);
         expect(instance(catMock).getTag(4).chip.id).toBe(3);
     });
 
     it('allows any number of accesses', () => {
-        const catMock = mock<CatClass>();
+        const catMock = mock(CatClass);
 
         when(catMock.purr()).return('hoyhoy').anyTimes();
         when(catMock.getTag(1).manufacturer.fetch()).resolve('hoyhoy').once();

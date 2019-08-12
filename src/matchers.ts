@@ -1,6 +1,6 @@
 import { AnyFunction, ConstructorType, Indexable } from './base-types';
-import { fmt } from './formatting';
-import { isMatcher, Matcher, MATCHER_KEY } from './matcher';
+import { fmt, formatArgArray } from './formatting';
+import { isMatcher, Matcher, MATCHER_KEY, MatcherMetadata } from './matcher';
 import { getMetadata, setMetadata } from './metadata';
 
 
@@ -21,20 +21,22 @@ export type MatchingLogic<T> = (candidate: T) => true | string;
  * 
  * @param match The matching logic.
  * @param name Name of this matcher.
+ * @param key Set of data to key this matcher.
  * 
  * @example
  * ```ts
  * const theAnswer = createMatcher(
  *     (t: number) => t === 42 || 'This is not the answer',
- *     'answer to life');
+ *     'answer to life',
+ *     {});
  * 
  * match(theAnswer, 22) // 'This is not the answer'
  * match(theAnswer, 42) // true
  * ```
  */
 // tslint:disable-next-line: no-shadowed-variable
-export function createMatcher<T>(match: MatchingLogic<T>, name: string): Matcher<T> {
-    return setMetadata({} as Matcher<T>, MATCHER_KEY, { match, name });
+export function createMatcher<T>(data: MatcherMetadata<any>): Matcher<T> {
+    return setMetadata({} as Matcher<T>, MATCHER_KEY, data);
 }
 
 /**
@@ -46,26 +48,55 @@ export function createMatcher<T>(match: MatchingLogic<T>, name: string): Matcher
  * ```
  */
 export function matching<T>(matcher: (value: T) => boolean) {
-    return createMatcher<T>(
-            value => matcher(value) || fmt`${value} did not match the custom matching logic`, 'custom matcher');
+    return createMatcher<T>(new MatchingMatcher(matcher)); // Matchers created this way are always unique
+}
+class MatchingMatcher implements MatcherMetadata<MatchingMatcher> {
+    /** @override */ name = 'custom matcher';
+    constructor(private matcher: (value: any) => boolean) { }
+    /** @override */ equals(_other: MatchingMatcher): boolean {
+        return false;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return this.matcher(actual) || fmt`${actual} did not match the custom matching logic`;
+    }
 }
 
 /**
  * Negates a matcher.
  */
 export function not<T>(t: T | Matcher<T>) {
-    return createMatcher<T>(actual =>
-        typeof match(t, actual) === 'string' || fmt`${actual} doesn't match not(${t})`
-    , fmt`not(${t})`);
+    return createMatcher<T>(new NotMatcher(t));
+}
+class NotMatcher implements MatcherMetadata<NotMatcher> {
+    constructor(private t: unknown) { }
+    /** @override */ get name() {
+        return fmt`not(${this.t})`;
+    }
+    /** @override */ equals(other: NotMatcher): boolean {
+        return match(other.t, this.t) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return match(this.t, actual) !== true || fmt`${actual} doesn't match not(${this.t})`;
+    }
 }
 
 /**
  * Matches variables by strict equality (===)
  */
 export function same<T>(expected: T): Matcher<T> {
-    return createMatcher(
-            actual => actual === expected || fmt`expected ${actual} to be the same instance as ${expected}`,
-            fmt`same(${expected})`);
+    return createMatcher(new SameMatcher(expected));
+}
+class SameMatcher implements MatcherMetadata<SameMatcher> {
+    constructor(private expected: unknown) { }
+    /** @override */ get name() {
+        return fmt`same(${this.expected})`;
+    }
+    /** @override */ equals(other: SameMatcher): boolean {
+        return other.expected === this.expected;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return this.expected === actual || fmt`expect ${actual} to be the same instance as ${this.expected}`;
+    }
 }
 
 /**
@@ -73,83 +104,138 @@ export function same<T>(expected: T): Matcher<T> {
  */
 export function weakEquals<T extends Comparable>(ref: T): Matcher<T> {
     // tslint:disable-next-line: triple-equals
-    return createMatcher(candidate => (candidate == ref) || `${candidate} is not equal to ${ref}`, `== ${ref}`);
+    return createMatcher(new WeakEqualsMatcher(ref));
+}
+class WeakEqualsMatcher implements MatcherMetadata<WeakEqualsMatcher> {
+    constructor(private expected: unknown) { }
+    /** @override */ get name() {
+        return fmt`== ${this.expected}`;
+    }
+    /** @override */ equals(other: WeakEqualsMatcher): boolean {
+        return other.expected === this.expected;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        // tslint:disable-next-line: triple-equals
+        return actual == this.expected || `${actual} is not equal to ${this.expected}`;
+    }
 }
 
 /**
  * Matches any argument, including omitted arguments.
  */
 export function anything(): Matcher<any> {
-    return createMatcher(() => true, 'anything');
+    return createMatcher(anythingMatcher);
 }
+const anythingMatcher = new class AnythingMatcher implements MatcherMetadata<AnythingMatcher> {
+    /** @override */ get name() {
+        return 'anything';
+    }
+    /** @override */ equals(other: AnythingMatcher): boolean {
+        return this === other;
+    }
+    /** @override */ match(_actual: unknown): string | true {
+        return true;
+    }
+}();
 
 /**
  * Matches an object which is an `instanceof` the expected type.
  */
 export function instanceOf<T>(ctr: ConstructorType<T>): Matcher<T> {
-    return createMatcher(
-            actual => actual instanceof ctr || fmt`${actual} is not an instance of ${ctr}`,
-            fmt`instanceOf(${ctr})`);
+    return createMatcher(new InstanceOfMatcher(ctr));
+}
+class InstanceOfMatcher implements MatcherMetadata<InstanceOfMatcher> {
+    constructor(private ctr: ConstructorType<any>) { }
+    /** @override */ get name() {
+        return fmt`instanceOf(${this.ctr})`;
+    }
+    /** @override */ equals(other: InstanceOfMatcher): boolean {
+        return other.ctr === this.ctr;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return actual instanceof this.ctr || fmt`${actual} is not an instance of ${this.ctr}`;
+    }
 }
 
 // ===================================
 // Type matchers
 // ===================================
 
-function typeMatcher<T>(predicate: (t: unknown) => t is T, type: string): Matcher<T> {
-    return createMatcher(
-            actual => predicate(actual) || `expected ${type} but got ${typeof actual}`,
-            `any ${type}`);
+function typeMatcher<T>(type: string): Matcher<T> {
+    return createMatcher(new TypeMatcher(type));
+}
+class TypeMatcher implements MatcherMetadata<TypeMatcher> {
+    constructor(private type: string) { }
+    /** @override */ get name() {
+        return fmt`any ${this.type}`;
+    }
+    /** @override */ equals(other: TypeMatcher): boolean {
+        return other.type === this.type;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return typeof actual === this.type || `expected ${this.type} but got ${typeof actual}`;
+    }
 }
 
 /**
  * Matches any variable of type number.
  */
 export function anyNumber(): Matcher<number> {
-    return typeMatcher((a): a is number => typeof a === 'number', 'number');
+    return typeMatcher('number');
 }
 
 /**
  * Matches any variable of type boolean.
  */
 export function anyBoolean(): Matcher<boolean> {
-    return typeMatcher((a): a is boolean => typeof a === 'boolean', 'boolean');
+    return typeMatcher('boolean');
 }
 
 /**
  * Matches any variable of type string.
  */
 export function anyString(): Matcher<string> {
-    return typeMatcher((a): a is string => typeof a === 'string', 'string');
+    return typeMatcher('string');
 }
 
 /**
  * Matches any variable of type function.
  */
 export function anyFunction(): Matcher<AnyFunction> {
-    return typeMatcher((a): a is AnyFunction => typeof a === 'function', 'function');
+    return typeMatcher('function');
 }
 
 /**
  * Matches any variable of type object.
  */
 export function anyObject(): Matcher<any> {
-    return typeMatcher((a): a is object => typeof a === 'object', 'object');
+    return typeMatcher('object');
 }
 
 /**
  * Matches any variable of type symbol.
  */
 export function anySymbol(): Matcher<symbol> {
-    return typeMatcher((a): a is symbol => typeof a === 'symbol', 'symbol');
+    return typeMatcher('symbol');
 }
 
 /**
  * Matches any variable of type array.
  */
 export function anyArray(): Matcher<any[]> {
-    return typeMatcher((a): a is any[] => Array.isArray(a), 'array');
+    return createMatcher(anyArrayMatcher);
 }
+const anyArrayMatcher = new class AnyArrayMatcher implements MatcherMetadata<AnyArrayMatcher> {
+    /** @override */ get name() {
+        return fmt`any array`;
+    }
+    /** @override */ equals(other: AnyArrayMatcher): boolean {
+        return this === other;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return Array.isArray(actual) || `expected an array but got ${typeof actual}`;
+    }
+}();
 
 
 // ===================================
@@ -161,12 +247,25 @@ export function anyArray(): Matcher<any[]> {
  * This is effectively a logical "OR" operation for matchers.
  */
 export function anyOf<T>(...args: T[]): Matcher<T> {
-    const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return createMatcher(actual => {
-        return args.reduce<string | true>(
-                (prev, curr) => prev === true || match(curr, actual),
-                fmt`${actual}` + `did not match any of ${formattedArgs}`);
-    }, `anyOf(${formattedArgs})`);
+    return createMatcher(new AnyOfMatcher(args));
+}
+class AnyOfMatcher implements MatcherMetadata<AnyOfMatcher> {
+
+    private formattedArgs = formatArgArray(this.args);
+
+    constructor(private args: any[]) { }
+
+    /** @override */ get name() {
+        return fmt`anyOf(${this.formattedArgs})`;
+    }
+    /** @override */ equals(other: AnyOfMatcher): boolean {
+        return match(this.args, other.args) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return this.args.reduce<string | true>(
+            (prev, curr) => prev === true || match(curr, actual),
+            fmt`${actual}` + `did not match any of ${this.formattedArgs}`);
+    }
 }
 
 /**
@@ -174,12 +273,25 @@ export function anyOf<T>(...args: T[]): Matcher<T> {
  * This is effectively a logical "AND" operation for matchers.
  */
 export function allOf<T>(...args: T[]): Matcher<T> {
-    const formattedArgs = args.map(a => fmt`${a}`).join(',');
-    return createMatcher(actual => {
-        return args.reduce<string | true>(
-                (prev, curr) => prev !== true ? prev : match(curr, actual),
-                true);
-    }, `allOf(${formattedArgs})`);
+    return createMatcher(new AllOfMatcher(args));
+}
+class AllOfMatcher implements MatcherMetadata<AllOfMatcher> {
+
+    private formattedArgs = formatArgArray(this.args);
+
+    constructor(private args: any[]) { }
+
+    /** @override */ get name() {
+        return fmt`allOf(${this.formattedArgs})`;
+    }
+    /** @override */ equals(other: AllOfMatcher): boolean {
+        return match(this.args, other.args) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return this.args.reduce<string | true>(
+            (prev, curr) => prev !== true ? prev : match(curr, actual),
+            true);
+    }
 }
 
 
@@ -193,45 +305,100 @@ type Comparable = string | number;
  * Matches any variable strictly greater than the provided reference.
  */
 export function greaterThan<T extends Comparable>(ref: T): Matcher<T> {
-    return createMatcher(candidate =>
-            (candidate > ref) || `${candidate} is no greater than ${ref}`,
-            `greater than ${ref}`);
+    return createMatcher(new GreaterThanMatcher(ref));
+}
+class GreaterThanMatcher implements MatcherMetadata<GreaterThanMatcher> {
+    constructor(private ref: Comparable) { }
+
+    /** @override */ get name() {
+        return fmt`greater than ${this.ref}`;
+    }
+    /** @override */ equals(other: GreaterThanMatcher): boolean {
+        return match(this.ref, other.ref) === true;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (actual > this.ref) || `${actual} is no greater than ${this.ref}`;
+    }
 }
 
 /**
  * Matches any variable strictly smaller than the provided reference.
  */
 export function smallerThan<T extends Comparable>(ref: T): Matcher<T> {
-    return createMatcher(
-            candidate => (candidate < ref) || `${candidate} is no smaller than ${ref}`,
-            `smaller than ${ref}`);
+    return createMatcher(new SmallerThanMatcher(ref));
+}
+class SmallerThanMatcher implements MatcherMetadata<SmallerThanMatcher> {
+    constructor(private ref: Comparable) { }
+
+    /** @override */ get name() {
+        return fmt`smaller than ${this.ref}`;
+    }
+    /** @override */ equals(other: SmallerThanMatcher): boolean {
+        return match(this.ref, other.ref) === true;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (actual < this.ref) || `${actual} is no smaller than ${this.ref}`;
+    }
 }
 
 /**
  * Matches any variable greater than or equal to the provided reference.
  */
 export function greaterThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return createMatcher(
-            candidate => (candidate >= ref) || `${candidate} is no greater than nor equals ${ref}`,
-            `greater than or equal to ${ref}`);
+    return createMatcher(new GreaterThanOrEqualMatcher(ref));
+}
+class GreaterThanOrEqualMatcher implements MatcherMetadata<GreaterThanOrEqualMatcher> {
+    constructor(private ref: Comparable) { }
+
+    /** @override */ get name() {
+        return fmt`greater than or equal to ${this.ref}`;
+    }
+    /** @override */ equals(other: GreaterThanOrEqualMatcher): boolean {
+        return match(this.ref, other.ref) === true;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (actual >= this.ref) || `${actual} is no greater than nor equals ${this.ref}`;
+    }
 }
 
 /**
  * Matches any variable smaller than or equal to the provided reference.
  */
 export function smallerThanOrEqual<T extends Comparable>(ref: T): Matcher<T> {
-    return createMatcher(
-            candidate => (candidate <= ref) || `${candidate} is no smaller than nor equals ${ref}`,
-            `smaller than or equal to ${ref}`);
+    return createMatcher(new SmallerThanOrEqualMatcher(ref));
+}
+class SmallerThanOrEqualMatcher implements MatcherMetadata<SmallerThanOrEqualMatcher> {
+    constructor(private ref: Comparable) { }
+
+    /** @override */ get name() {
+        return fmt`smaller than or equal to ${this.ref}`;
+    }
+    /** @override */ equals(other: SmallerThanOrEqualMatcher): boolean {
+        return match(this.ref, other.ref) === true;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (actual <= this.ref) || `${actual} is no smaller than nor equals ${this.ref}`;
+    }
 }
 
 /**
  * Matches any variable strictly equal to the provided reference.
  */
 export function equals<T extends Comparable>(ref: T): Matcher<T> {
-    return createMatcher(
-            candidate => (candidate === ref) || `${candidate} is not strictly equal to ${ref}`,
-            `=== ${ref}`);
+    return createMatcher(new EqualsMatcher(ref));
+}
+class EqualsMatcher implements MatcherMetadata<EqualsMatcher> {
+    constructor(private ref: Comparable) { }
+
+    /** @override */ get name() {
+        return fmt`=== ${this.ref}`;
+    }
+    /** @override */ equals(other: EqualsMatcher): boolean {
+        return match(this.ref, other.ref) === true;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (actual === this.ref) || `${actual} is not strictly equal to ${this.ref}`;
+    }
 }
 
 type RangeBound<T extends Comparable> = T | {
@@ -258,12 +425,34 @@ export function between<T extends Comparable>(min: RangeBound<T>, max: RangeBoun
     const [ maxValue, includeMax ] = (typeof max === 'object' && 'exclusive' in max) ?
             [ max.value, !max.exclusive] :
             [ max, true ];
-    const rangeText = `${includeMin ? '[' : ']'}${minValue} ; ${maxValue}${includeMax ? ']' : '['}`;
 
-    return createMatcher(candidate => (
-        (candidate > minValue || includeMin && candidate === minValue) &&
-        (candidate < maxValue || includeMax && candidate === maxValue)
-    ) || `${candidate} is not in range ${rangeText}`, `range ${rangeText}`);
+    return createMatcher(new BetweenMatcher(minValue, includeMin, maxValue, includeMax));
+}
+class BetweenMatcher implements MatcherMetadata<BetweenMatcher> {
+    private rangeText = `${this.includeMin ? '[' : ']'}${this.minValue} ; ${
+                this.maxValue}${this.includeMax ? ']' : '['}`;
+
+    constructor(
+        private minValue: Comparable,
+        private includeMin: boolean,
+        private maxValue: Comparable,
+        private includeMax: boolean) { }
+
+    /** @override */ get name() {
+        return `range ${this.rangeText}`;
+    }
+    /** @override */ equals(other: BetweenMatcher): boolean {
+        return this.includeMax === other.includeMax &&
+                this.includeMin === other.includeMin &&
+                this.minValue === other.minValue &&
+                this.maxValue === other.maxValue;
+    }
+    /** @override */ match(actual: Comparable): string | true {
+        return (
+            (actual > this.minValue || this.includeMin && actual === this.minValue) &&
+            (actual < this.maxValue || this.includeMax && actual === this.maxValue)
+        ) || `${actual} is not in range ${this.rangeText}`;
+    }
 }
 
 
@@ -275,12 +464,23 @@ export function between<T extends Comparable>(min: RangeBound<T>, max: RangeBoun
  * Matches an object whose JSON representation is the same as that of the expected.
  */
 export function jsonEq<T>(expected: T): Matcher<T> {
-    return Object.assign({}, expected, createMatcher(actual => {
-        const serializedExpected = JSON.stringify(expected);
-        const serializedActual = JSON.stringify(actual);
+    return createMatcher(new JsonEqualMatcher(expected));
+}
+class JsonEqualMatcher implements MatcherMetadata<JsonEqualMatcher> {
+    constructor(private expected: unknown) { }
 
+    /** @override */ get name() {
+        return fmt`jsonEq(${this.expected})`;
+    }
+    /** @override */ equals(other: JsonEqualMatcher): boolean {
+        return match(this.expected, other.expected) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
+
+        const serializedExpected = JSON.stringify(this.expected);
+        const serializedActual = JSON.stringify(actual);
         return serializedActual === serializedExpected || `expected ${serializedExpected} but got ${serializedActual}`;
-    }, fmt`jsonEq(${expected})`));
+    }
 }
 
 /**
@@ -289,24 +489,35 @@ export function jsonEq<T>(expected: T): Matcher<T> {
  * The expected array can contain nested matchers.
  */
 export function arrayEq<T extends any[]>(expected: T): Matcher<T> {
-    return Object.assign(expected.slice() as T, createMatcher(actual => {
+    return createMatcher(new ArrayEqualMatcher(expected));
+}
+class ArrayEqualMatcher implements MatcherMetadata<ArrayEqualMatcher> {
+    constructor(private expected: any[]) { }
+
+    /** @override */ get name() {
+        return fmt`arrayEq(${this.expected})`;
+    }
+    /** @override */ equals(other: ArrayEqualMatcher): boolean {
+        return match(this.expected, other.expected) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
         if (!(actual instanceof Array)) {
             return fmt`expected array type but got ${actual}`;
         }
 
-        if (expected.length !== actual.length) {
-            return `array length differ: expected ${expected.length} but got ${actual.length}`;
+        if (this.expected.length !== actual.length) {
+            return `array length differ: expected ${this.expected.length} but got ${actual.length}`;
         }
 
-        for (let i = 0 ; i < expected.length ; i++) {
-            const matched = match(expected[i], actual[i]);
+        for (let i = 0 ; i < this.expected.length ; i++) {
+            const matched = match(this.expected[i], actual[i]);
             if (matched !== true) {
                 return `element $${i} mismatches: ${indentMessage(matched)}`;
             }
         }
 
         return true;
-    }, fmt`arrayEq(${expected})`));
+    }
 }
 
 function indentMessage(message: string): string {
@@ -319,9 +530,21 @@ function indentMessage(message: string): string {
  */
 export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
-    const expectedKeys = Object.keys(expected).sort();
 
-    return Object.assign({}, expected, createMatcher(actual => {
+    return createMatcher(new ObjectEqualMatcher(expected));
+}
+class ObjectEqualMatcher implements MatcherMetadata<ObjectEqualMatcher> {
+    private expectedKeys = Object.keys(this.expected).sort();
+
+    constructor(private expected: object) { }
+
+    /** @override */ get name() {
+        return fmt`objectEq(${this.expected})`;
+    }
+    /** @override */ equals(other: ObjectEqualMatcher): boolean {
+        return match(this.expected, other.expected) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
         if (typeof actual !== 'object') {
             return fmt`expected variable of type object but was ${typeof actual}`;
         }
@@ -331,7 +554,7 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
         }
 
         const actualKeys = Object.keys(actual).sort();
-        const diff = keySetDifference(expectedKeys, actualKeys);
+        const diff = keySetDifference(this.expectedKeys, actualKeys);
 
         if (diff.add.length > 0) {
             return `actual object is missing the following properties: ${diff.add.map(k => '"' + k + '"').join(', ')}`;
@@ -341,8 +564,8 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
         }
 
         const errors: string[] = [];
-        for (const key of expectedKeys) {
-            const matched = match((expected as Indexable)[key], (actual as Indexable)[key]);
+        for (const key of this.expectedKeys) {
+            const matched = match((this.expected as Indexable)[key], (actual as Indexable)[key]);
             if (matched !== true) {
                 errors.push(`- [${key}]: ${indentMessage(matched)}`);
             }
@@ -353,7 +576,7 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
         }
 
         return true;
-    }, fmt`objectEq(${expected})`));
+    }
 }
 
 /**
@@ -361,10 +584,21 @@ export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
  */
 export function contains<T extends object>(expectedUnsafe: Partial<T>): Matcher<T> {
     const expected = Object.assign({}, expectedUnsafe);
-    return createMatcher(actual => {
+    return createMatcher(new ContainsMatcher(expected));
+}
+class ContainsMatcher implements MatcherMetadata<ContainsMatcher> {
+    constructor(private expected: object) { }
+
+    /** @override */ get name() {
+        return fmt`objectContaining(${this.expected})`;
+    }
+    /** @override */ equals(other: ContainsMatcher): boolean {
+        return match(this.expected, other.expected) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
         const errors: string[] = [];
-        for (const key of Object.keys(expected)) {
-            const matched = match((expected as Indexable)[key], (actual as Indexable)[key]);
+        for (const key of Object.keys(this.expected)) {
+            const matched = match((this.expected as Indexable)[key], (actual as Indexable)[key]);
             if (matched !== true) {
                 errors.push(`- [${key}]: ${indentMessage(matched)}`);
             }
@@ -375,7 +609,7 @@ export function contains<T extends object>(expectedUnsafe: Partial<T>): Matcher<
         }
 
         return true;
-    }, fmt`objectContaining(${expected})`);
+    }
 }
 
 /**
@@ -433,14 +667,20 @@ function keySetDifference(to: string[], from: string[]): { add: string[], remove
  */
 export function match(expected: unknown, actual: unknown): true | string {
     if (isMatcher(expected)) {
-        return getMetadata(expected, MATCHER_KEY).match(actual);
+        const expectedMatcher = getMetadata(expected, MATCHER_KEY);
+        if (isMatcher(actual)) {
+            const actualMatcher = getMetadata(actual, MATCHER_KEY);
+            return expectedMatcher.name === actualMatcher.name && expectedMatcher.equals(actualMatcher) || 
+                    `matcher ${expectedMatcher.name} differs from ${actualMatcher.name}`;
+        }
+        return expectedMatcher.match(actual);
     } else if (typeof expected === 'object' || typeof expected === 'function') {
 
         if (expected == null) { // null or undefined
             return actual === expected || fmt`expected ${actual} to be ${expected}.`;
         }
 
-        if (expected instanceof Array) {
+        if (Array.isArray(expected)) {
             return getMetadata(arrayEq(expected), MATCHER_KEY).match(actual);
         }
 

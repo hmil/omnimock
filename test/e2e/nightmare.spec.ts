@@ -1,4 +1,4 @@
-import { mock, when, instance, anyString, greaterThan, between } from "../src";
+import { anyString, between, greaterThan, instance, mock, when } from '../../src';
 
 describe('The nightmare test suite', () => {
 
@@ -14,22 +14,22 @@ describe('The nightmare test suite', () => {
                 scariness: number;
                 color: string;
             };
-            // Has methods
-            sendMessage(id: number, message: string): { response: string };
             // Deeply nested object with mixed-in methods and properties
             plane: DreamLevel;
+            // Has methods
+            sendMessage(id: number, message: string): { response: string };
             // This name must be escaped
             '!improbable'(): string;
         }
 
         interface DreamLevel {
             characters: string[];
-            dreamOf(character: string): DreamLevel;
             isLimbo: boolean;
+            dreamOf(character: string): DreamLevel;
         }
 
         // This is our mock control, we use it to set expectations...
-        const nightmareMock = mock<Nightmare>();
+        const nightmareMock = mock<Nightmare>('nightmareMock');
         // ...which will be realized by this mocked instance
         const nightmare = instance(nightmareMock);
 
@@ -58,7 +58,7 @@ describe('The nightmare test suite', () => {
         when(yusufsDreamMock('arthur').dreamOf('eames').isLimbo).useValue(false);
         when(yusufsDreamMock('arthur').dreamOf('eames').dreamOf('saito').isLimbo).useValue(true);
         // MockDream is a recursive "catch all" which will accept to visit any dream
-        const mockDream = mock<DreamLevel>();
+        const mockDream = mock<DreamLevel>('mockDream');
         when(mockDream.characters).useValue([ 'ghost' ]);
         when(mockDream.isLimbo).useValue(true);
         when(mockDream.dreamOf(anyString())).return(instance(mockDream));

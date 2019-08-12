@@ -1,5 +1,5 @@
 import { MockExpectations } from 'expectations';
-import { GetMetadata, WithMetadata } from './metadata';
+import { WithMetadata } from './metadata';
 
 export type RecordingType = 'getter' | 'call';
 
@@ -9,7 +9,7 @@ export type RECORDING_METADATA_KEY = typeof RECORDING_METADATA_KEY;
 export interface RecordingMetadata<Type extends RecordingType, Args extends unknown[] | undefined, Ret> {
     readonly type: Type;
     readonly args: Args;
-    readonly ret: Ret;
+    readonly ret: () => Ret;
     readonly expectations: MockExpectations<Args, Ret>;
     /**
      * Creates the chain of mocks required to reach the current object.
@@ -19,6 +19,14 @@ export interface RecordingMetadata<Type extends RecordingType, Args extends unkn
      * Resets all expectations for this recording and its descendents
      */
     reset(): void;
+    /**
+     * Verifies all expectations for this recording and its descendents
+     */
+    verify(): string[];
+    /**
+     * Returns a human-readable string describing this recording
+     */
+    debug(): string;
 }
 
 type UnknownMetadata = RecordingMetadata<RecordingType, unknown[], unknown>;
@@ -28,11 +36,11 @@ export interface Recording<T extends AnyMetadata> extends WithMetadata<RECORDING
 
 export type AnyRecording = Recording<AnyMetadata>;
 export type UnknownRecording = Recording<UnknownMetadata>;
-export type MethodCallRecording = Recording<RecordingMetadata<'call', unknown[], unknown>>;
-export type AnyMethodCallRecording = Recording<RecordingMetadata<'call', any, any>>;
-export type GetterRecording = Recording<RecordingMetadata<'getter', unknown[], unknown>>;
+// export type MethodCallRecording = Recording<RecordingMetadata<'call', unknown[], unknown>>;
+// export type AnyMethodCallRecording = Recording<RecordingMetadata<'call', any, any>>;
+// export type GetterRecording = Recording<RecordingMetadata<'getter', unknown[], unknown>>;
 
-// Type-level operators to access expectation setter data.
-export type RecordedType<T> = T extends Recording<infer Metadata> ? Metadata['ret'] : never;
-export type RecordedArguments<T extends UnknownRecording> = GetMetadata<RECORDING_METADATA_KEY, T>['args'];
-export type IfMethod<T, Then, Else> = T extends AnyMethodCallRecording ? Then : Else;
+// // Type-level operators to access expectation setter data.
+export type RecordedType<T> = T extends Recording<infer Metadata> ? ReturnType<Metadata['ret']> : never;
+export type RecordedArguments<T> = T extends Recording<infer Metadata> ? Metadata['args'] : never;
+// export type IfMethod<T, Then, Else> = T extends AnyMethodCallRecording ? Then : Else;

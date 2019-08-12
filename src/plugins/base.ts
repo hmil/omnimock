@@ -1,11 +1,12 @@
 import {
+    AnyRecording,
     ExpectationSetter,
     plugin,
     RecordedArguments,
     RecordedType,
     UnknownRecording,
 } from '../plugin-api';
-import { AnyRecording } from '../recording';
+import {  } from '../recording';
 
 export interface BaseExpectations<T extends AnyRecording> {
     return: (value: RecordedType<T>) => ExpectationSetter<T>;
@@ -36,7 +37,12 @@ plugin.registerExpectations((api): BaseExpectations<UnknownRecording> => {
             return api.chain();
         },
         callThrough() {
-            api.answer(runtime => runtime.getOriginalTarget());
+            api.answer(runtime => {
+                if (runtime.getOriginalTarget === undefined) {
+                    throw new Error('Attempted to `callThrough` using a backing object with no such method.');
+                }
+                return runtime.getOriginalTarget();
+            });
             return api.chain();
         },
         useGetter(cb) {
@@ -48,7 +54,12 @@ plugin.registerExpectations((api): BaseExpectations<UnknownRecording> => {
             return api.chain();
         },
         useActual() {
-            api.answer(runtime => runtime.getOriginalTarget());
+            api.answer(runtime => {
+                if (runtime.getOriginalTarget === undefined) {
+                    throw new Error('Attempted to `useActual` using a backing object with no such member.');
+                }
+                return runtime.getOriginalTarget();
+            });
             return api.chain();
         }
     };

@@ -52,10 +52,6 @@ export class Range {
         }
     }
 
-    public expectedCount(): string {
-        return `expected: ${this.toString()}`;
-    }
-
     public contains(count: number): boolean {
         return this.minimum <= count && count <= this.maximum;
     }

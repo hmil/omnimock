@@ -1,10 +1,10 @@
-import { anyString, instance, mock, when } from '../src';
-import { CatClass } from './fixtures/classes';
+import { anyString, instance, mock, when } from '../../src';
+import { CatClass } from '../fixtures/classes';
 
 describe('partial mocks', () => {
 
     it('forwards unexpected accesses to known values', () => {
-        const catMock = mock<CatClass>({
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
@@ -15,7 +15,7 @@ describe('partial mocks', () => {
     });
 
     it('throws on unexpected access to unknown value', () => {
-        const catMock = mock<CatClass>({
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
@@ -24,7 +24,7 @@ describe('partial mocks', () => {
     });
 
     it('permits mocking omitted values', () => {
-        const catMock = mock<CatClass>({
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
@@ -34,7 +34,7 @@ describe('partial mocks', () => {
     });
 
     it('permits mocking specified values', () => {
-        const catMock = mock<CatClass>({
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
@@ -44,7 +44,7 @@ describe('partial mocks', () => {
     });
 
     it('permits through-mocking of known values', () => {
-        const catMock = mock<CatClass>({
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
@@ -53,14 +53,13 @@ describe('partial mocks', () => {
         expect(instance(catMock).purr()).toBe('hello');
     });
 
-    it('through-mocking of unknown values yields undefined', () => {
-        // TODO: Should this instead throw an Error?
-        const catMock = mock<CatClass>({
+    it('through-mocking of unknown values is an error', () => {
+        const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',
             purr: () => 'hello'
         });
         when(catMock.food).useActual();
-        expect(instance(catMock).food).toBeUndefined();
+        expect(() => instance(catMock).food).toThrow(/Attempted to `useActual`/);
     });
 });
