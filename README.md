@@ -74,10 +74,10 @@ The main feature a mocking library brings to the table is **automatic mocks**. W
 Going back to the example above, we know that the `battlefield` class will only need the card's mana cost, player 1's mana reserve and the clock data. We can rewrite the test like this.
 
 ```ts
-const fakeCard = mock<MtgCard>({
+const fakeCard = mock<MtgCard>('fakeCard', {
     cost: 'UW'
 });
-const gameState = mock<MtgState>({
+const gameState = mock<MtgState>('gameState', {
     clock: {
         player: 1,
         phase: 'precombat main'
@@ -118,8 +118,8 @@ const myService = {
 }
 
 // Setup
-const mockCat = mock<CatType>();
-when(mockCat.greet('John')).return('Hello John');
+const mockCat = mock<CatType>('mockCat');
+when(mockCat.greet('John')).return('Hello John').atLeastOnce();
 
 // Test execution
 const result = myService.doSomethingWithACat(instance(mockCat));
