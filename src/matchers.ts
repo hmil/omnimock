@@ -1,5 +1,5 @@
 import { AnyFunction, ConstructorType, Indexable } from './base-types';
-import { fmt, formatArgArray } from './formatting';
+import { fmt, formatArgArray, indent } from './formatting';
 import { isMatcher, Matcher, MATCHER_KEY, MatcherMetadata } from './matcher';
 import { getMetadata, setMetadata } from './metadata';
 
@@ -256,7 +256,7 @@ class AnyOfMatcher implements MatcherMetadata<AnyOfMatcher> {
     constructor(private args: any[]) { }
 
     /** @override */ get name() {
-        return fmt`anyOf(${this.formattedArgs})`;
+        return `anyOf(${this.formattedArgs})`;
     }
     /** @override */ equals(other: AnyOfMatcher): boolean {
         return match(this.args, other.args) === true;
@@ -282,7 +282,7 @@ class AllOfMatcher implements MatcherMetadata<AllOfMatcher> {
     constructor(private args: any[]) { }
 
     /** @override */ get name() {
-        return fmt`allOf(${this.formattedArgs})`;
+        return `allOf(${this.formattedArgs})`;
     }
     /** @override */ equals(other: AllOfMatcher): boolean {
         return match(this.args, other.args) === true;
@@ -512,7 +512,7 @@ class ArrayEqualMatcher implements MatcherMetadata<ArrayEqualMatcher> {
         for (let i = 0 ; i < this.expected.length ; i++) {
             const matched = match(this.expected[i], actual[i]);
             if (matched !== true) {
-                return `element $${i} mismatches: ${indentMessage(matched)}`;
+                return `element $${i} doesn't match: ${indent(matched)}`;
             }
         }
 
@@ -520,15 +520,12 @@ class ArrayEqualMatcher implements MatcherMetadata<ArrayEqualMatcher> {
     }
 }
 
-function indentMessage(message: string): string {
-    return message.replace('\n', '\n    ');
-}
-
 /**
  * Matches an object by performing a recursive match against each member.
  * The set of members of the expected object must be the same as those of the actual object.
  */
 export function objectEq<T extends object>(expectedUnsafe: T): Matcher<T> {
+    // TODO: deep clone
     const expected = Object.assign({}, expectedUnsafe);
 
     return createMatcher(new ObjectEqualMatcher(expected));
@@ -567,12 +564,12 @@ class ObjectEqualMatcher implements MatcherMetadata<ObjectEqualMatcher> {
         for (const key of this.expectedKeys) {
             const matched = match((this.expected as Indexable)[key], (actual as Indexable)[key]);
             if (matched !== true) {
-                errors.push(`- [${key}]: ${indentMessage(matched)}`);
+                errors.push(`- [${key}]: ${indent(matched)}`);
             }
         }
 
         if (errors.length > 0) {
-            return `object mismatch:\n${errors.join('\n')}`;
+            return `object doesn't match:\n${errors.join('\n')}`;
         }
 
         return true;
@@ -600,12 +597,12 @@ class ContainsMatcher implements MatcherMetadata<ContainsMatcher> {
         for (const key of Object.keys(this.expected)) {
             const matched = match((this.expected as Indexable)[key], (actual as Indexable)[key]);
             if (matched !== true) {
-                errors.push(`- [${key}]: ${indentMessage(matched)}`);
+                errors.push(`- [${key}]: ${indent(matched)}`);
             }
         }
 
         if (errors.length > 0) {
-            return `object mismatch:\n${errors.join('\n')}`;
+            return `object doesn't match:\n${errors.join('\n')}`;
         }
 
         return true;

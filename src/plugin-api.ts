@@ -15,18 +15,14 @@
  * plugin.registerExpectations(...);
  * ```
  */
-import { ExpectationHandler, MockExpectations } from './expectations';
+import { ExpectationHandler } from './behavior/Behavior';
+import { MockBehaviors } from './behavior/MockExpectations';
 import { GetMetadata, getMetadata } from './metadata';
 import { AnyRecording, RecordedArguments, RecordedType, RECORDING_METADATA_KEY, UnknownRecording } from './recording';
 
 export { OmniMockError } from './error';
 export * from './range';
-export {
-    AnyRecording,
-    RecordedArguments,
-    RecordedType,
-    UnknownRecording
-} from './recording';
+export { AnyRecording, RecordedArguments, RecordedType, UnknownRecording } from './recording';
 
 export const plugin = {
     registerExpectations,
@@ -65,7 +61,7 @@ class ExpectationSetterApi<T extends AnyRecording> {
         this.recording.expectations.addExpectation(this.recording.args, cb);
     }
 
-    get expectations(): MockExpectations<RecordedArguments<T>, RecordedType<T>> {
+    get expectations(): MockBehaviors<RecordedArguments<T>, RecordedType<T>> {
         return this.recording.expectations;
     }
 }

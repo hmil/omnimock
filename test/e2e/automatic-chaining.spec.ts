@@ -78,7 +78,6 @@ describe('automatic chaining', () => {
 
         expect(instance(catMock).getTag(11).chip.id).toBe(12);
 
-        // TODO: Revize matchers behavior such that identical matchers can be matched
         expect(await instance(catMock).getTag(11).manufacturer.fetch()).toBe('hitachi');
         expect(instance(catMock).getTag(7)).toBe(realCat.tag);
         expect(instance(catMock).getTag(4).chip.id).toBe(3);

@@ -1,4 +1,4 @@
-import { MockExpectations } from 'expectations';
+import { MockBehaviors } from './behavior/MockExpectations';
 import { WithMetadata } from './metadata';
 
 export type RecordingType = 'getter' | 'call';
@@ -10,7 +10,7 @@ export interface RecordingMetadata<Type extends RecordingType, Args extends unkn
     readonly type: Type;
     readonly args: Args;
     readonly ret: () => Ret;
-    readonly expectations: MockExpectations<Args, Ret>;
+    readonly expectations: MockBehaviors<Args, Ret>;
     /**
      * Creates the chain of mocks required to reach the current object.
      */

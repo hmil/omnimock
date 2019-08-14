@@ -434,6 +434,15 @@ describe('argument matchers', () => {
             expect(() => instance(myMock)({ name: 'Ola', age: 45 })).toThrow(/Unexpected/);
             expect(instance(myMock)({ name: 'Ola', age: 35 })).toBe(true);
         });
+        it('Protects against modifications', () => {
+            const myMock = mock<(arg: object) => boolean>('myMock');
+            const ref = { name: 'Ola', job: 'teacher' };
+
+            when(myMock(objectEq(ref))).return(true);
+            ref.name = 'Steven';
+
+            expect(() => instance(myMock)(ref)).toThrow(/Unexpected/);
+        });
     });
 
     describe('objectContaining', () => {

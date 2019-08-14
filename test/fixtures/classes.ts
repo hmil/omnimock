@@ -34,6 +34,10 @@ export class CatClass extends Container {
     public getTag(_tagNumber: number): Tag {
         return this.tag;
     }
+
+    public setTag(t: Tag): void {
+        // noop
+    }
     
     constructor(
             public name: string) {
