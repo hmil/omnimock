@@ -41,23 +41,41 @@ export function createMatcher<T>(data: MatcherMetadata<any>): Matcher<T> {
 
 /**
  * Arbitrary matcher. Use this when no other matcher does the job.
- * 
+ *
+ * Use either a function or a regexp. If a function is provided, it is passed the
+ * input value and must return true if and only if the input value matches.
+ *
  * ```ts
  * // Matches strings whose third character is the letter 'o'
  * matching<string>(value => value.charAt(2) !== 'o');
  * ```
  */
-export function matching<T>(matcher: (value: T) => boolean) {
-    return createMatcher<T>(new MatchingMatcher(matcher)); // Matchers created this way are always unique
+export function matching(rx: RegExp): Matcher<string>;
+export function matching<T>(matcher: (value: T) => boolean): Matcher<T>;
+export function matching<T>(matcherOrRx: ((value: T) => boolean) | RegExp) {
+    if (matcherOrRx instanceof RegExp) {
+        return createMatcher<T>(new RxMatcher(matcherOrRx));
+    }
+    return createMatcher<T>(new MatchingMatcher(matcherOrRx)); // Matchers created this way are always unique
 }
 class MatchingMatcher implements MatcherMetadata<MatchingMatcher> {
     /** @override */ name = 'custom matcher';
     constructor(private matcher: (value: any) => boolean) { }
-    /** @override */ equals(_other: MatchingMatcher): boolean {
-        return false;
+    /** @override */ equals(other: MatchingMatcher): boolean {
+        return this.matcher === other.matcher;
     }
     /** @override */ match(actual: unknown): string | true {
         return this.matcher(actual) || fmt`${actual} did not match the custom matching logic`;
+    }
+}
+class RxMatcher implements MatcherMetadata<RxMatcher> {
+    /** @override */ name = this.rx.toString();
+    constructor(private rx: RegExp) { }
+    /** @override */ equals(other: RxMatcher): boolean {
+        return this.rx.toString() === other.rx.toString();
+    }
+    /** @override */ match(actual: string): string | true {
+        return this.rx.test(actual) || fmt`${actual} did not match the custom matching logic`;
     }
 }
 

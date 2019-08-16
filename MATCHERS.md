@@ -189,18 +189,18 @@ test({ name: 'Ola', job: 'teacher' }));          // Error
 test({ name: 'Ola', age: 35 }));                 // OK
 ```
 
+### <a name="matching"></a> matching
 
-# <a name="custom-matcher"></a> Custom matching
-
-## Inline matching logic
-
+This matcher lets you specify an arbitrary matching 
 If you cannot find a matcher that suits your needs, create a custom matching condition with the `matching` matcher.
 
 ```ts
 when(myMock(matching(value => value.charAt(2) === 'o'))).return(true);
 ```
 
-## Custom matcher
+# <a name="custom-matcher"></a> Custom matcher
+
+If you just need a one-off matching function, use [matching](#matching).
 
 If you plan to re-use your matcher a lot, it is best to create a real custom matcher. Doing it this way helps OmniMock print better error messages when things don't go as expected.
 

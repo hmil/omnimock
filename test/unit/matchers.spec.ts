@@ -484,6 +484,32 @@ describe('argument matchers', () => {
             expect(() => instance(myMock)('Ola')).toThrow(/Unexpected/);
             expect(instance(myMock)('Olo')).toBe(true);
         });
+        it('can take a regexp', () => {
+            const myMock = mock<(arg: string) => boolean>('myMock');
+
+            when(myMock(matching(/^.{2}o/))).return(true);
+
+            expect(() => instance(myMock)('Ola')).toThrow(/Unexpected/);
+            expect(instance(myMock)('Olo')).toBe(true);
+        });
+        it('equals itself only if based on the same regexp or same function', () => {
+            const firstFunction = (() => {
+                return function matchingFn(s: string) {
+                    return true;
+                };
+            })();
+            const secondFunction = (() => {
+                // It's important that both matching functions have the same name so we can verify
+                // that functions are compared by reference and not by name
+                return function matchingFn(s: string) {
+                    return true;
+                };
+            })();
+            expect(match(matching(firstFunction), matching(firstFunction))).toBe(true);
+            expect(match(matching(firstFunction), matching(secondFunction))).not.toBe(true);
+            expect(match(matching(/f.+o[o]/), matching(/f.+o[o]/))).toBe(true);
+            expect(match(matching(/f.+o[o]/), matching(/f.+o[a]/))).not.toBe(true);
+        });
     });
 
     describe('not', () => {
