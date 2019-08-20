@@ -6,7 +6,7 @@ import { ChainingMockCache } from './ChainableMockCache';
 import { formatArgArray, formatPropertyAccess, Formattable, makeConstructorPath, setStringFormat } from './formatting';
 import { lazySingleton, undefinedOr } from './fp-utils';
 import { getMetadata, METADATA_KEY, setMetadata } from './metadata';
-import { AnyRecording, Recording, RecordingMetadata, RecordingType, RECORDING_METADATA_KEY } from './recording';
+import { AnyRecording, Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
 
 const constructorCacheKey = Symbol('constructor');
 const FILTERED_PROPS = ['toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
