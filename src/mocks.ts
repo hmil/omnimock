@@ -3,10 +3,10 @@ import { isFailure, RuntimeContext } from './behavior/Behavior';
 import { MockBehaviors } from './behavior/MockExpectations';
 import { reportFunctionCallError, reportMemberAccessError } from './behavior/reporters';
 import { ChainingMockCache } from './ChainableMockCache';
-import { formatArgArray, formatPropertyAccess, makeConstructorPath } from './formatting';
+import { formatArgArray, formatPropertyAccess, Formattable, makeConstructorPath, setStringFormat } from './formatting';
 import { lazySingleton, undefinedOr } from './fp-utils';
-import { getMetadata, METADATA_KEY } from './metadata';
-import { Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
+import { getMetadata, METADATA_KEY, setMetadata } from './metadata';
+import { AnyRecording, Recording, RecordingMetadata, RecordingType, RECORDING_METADATA_KEY } from './recording';
 
 const constructorCacheKey = Symbol('constructor');
 const FILTERED_PROPS = ['toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
@@ -117,7 +117,8 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
         params.chain();
     }
 
-    const metadata: RecordingMetadata<RecordingType, unknown[] | undefined, T> = {
+    const metadata: AnyRecording & Formattable = {} as any;
+    setMetadata(metadata, RECORDING_METADATA_KEY, {
         expectations: params.expectations,
         args: params.args,
         type: params.recordingType,
@@ -166,12 +167,13 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
             }
             throw new Error(`"instance" needs to be called on the root of a mock. It was called on ${params.path}.`);
         }
-    };
+    });
+    setStringFormat(metadata, () => `mock(${params.path})`);
 
     return {
         get(_target: T, p: PropertyKey, _receiver: any): any {
             if (p === METADATA_KEY) {
-                return { [RECORDING_METADATA_KEY]: metadata };
+                return metadata[METADATA_KEY];
             }
             return mockCache.getOrElse(p, () => {
                 const newPath = params.path + formatPropertyAccess(p);
@@ -307,11 +309,23 @@ interface InstanceParameters<T extends object> {
 
 function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): ProxyHandler<T> {
 
+    const metadata: Formattable = {} as any;
+    setStringFormat(metadata, () => `instance(${params.expectedCalls.path})`);
+
     return {
         getPrototypeOf(_target: T): object | null {
             return params.getOriginalPrototype();
         },
+        has(target: T, p: PropertyKey): boolean {
+            if (p === METADATA_KEY) {
+                return true;
+            }
+            return Reflect.has(target, p);
+        },
         get(target: T, p: PropertyKey, receiver: any): any {
+            if (p === METADATA_KEY) {
+                return metadata[METADATA_KEY];
+            }
             const answer = params.expectedMemberAccess.get(p);
             function getSignature() {
                 return params.expectedCalls.path + formatPropertyAccess(p);

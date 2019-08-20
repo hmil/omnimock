@@ -99,11 +99,11 @@ describe('error messages', () => {
                 id: 23
             };
             expect(() => instance(catMock).setTag(tag)).toThrow(
-`Unexpected call: <CatClass>.setTag(Object(chip,manufacturer,siblings))
+`Unexpected call: <CatClass>.setTag(Object(chip, manufacturer, siblings))
 
 The following behaviors were tested but they did not match:
 
-- <CatClass>.setTag(<objectEq(Object(chip,manufacturer,siblings))>) : expected once, received 0
+- <CatClass>.setTag(<objectEq(Object(chip, manufacturer, siblings))>) : expected once, received 0
   reason: element $0 doesn't match: object doesn't match:
     - [chip]: object doesn't match:
       - [id]: expected 1 but got 23

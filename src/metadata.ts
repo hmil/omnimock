@@ -33,10 +33,12 @@ export function setMetadata<Key extends string, DATA, T extends WithMetadata<Key
 }
 
 export function hasMetadata<Key extends string, DATA>(
-        t: object,
+        t: unknown,
         key: Key): t is WithMetadata<Key, DATA> {
 
-    return (METADATA_KEY in t) &&
+    return (typeof t === 'object' || typeof t === 'function') &&
+            t != null &&
+            (METADATA_KEY in t) &&
             (t as WithMetadata<Key, unknown>)[METADATA_KEY] != null &&
             (t as WithMetadata<Key, unknown>)[METADATA_KEY][key] != null;
 }

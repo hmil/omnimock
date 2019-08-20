@@ -1,5 +1,5 @@
 import { AnyFunction, ConstructorType, Indexable } from './base-types';
-import { fmt, formatArgArray, indent } from './formatting';
+import { fmt, formatArgArray, indent, setStringFormat } from './formatting';
 import { isMatcher, Matcher, MATCHER_KEY, MatcherMetadata } from './matcher';
 import { getMetadata, setMetadata } from './metadata';
 
@@ -36,7 +36,15 @@ export type MatchingLogic<T> = (candidate: T) => true | string;
  */
 // tslint:disable-next-line: no-shadowed-variable
 export function createMatcher<T>(data: MatcherMetadata<any>): Matcher<T> {
-    return setMetadata({} as Matcher<T>, MATCHER_KEY, data);
+    function toString() {
+        return `<${getMetadata(target, MATCHER_KEY).name}>`;
+    }
+    const target = {
+        toString
+    } as Matcher<T>;
+    setMetadata(target, MATCHER_KEY, data);
+    setStringFormat(target as any, toString);
+    return target;
 }
 
 /**
