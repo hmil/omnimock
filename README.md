@@ -462,10 +462,10 @@ when(myMock.doSomething).useValue(() => 'something was done');
 You may delegate method calls and member access to the backing instance of [backed](#backed-vs-virtual) mocks.
 
 ```ts
-const myMock = mock({
-    sayHello: (name: string) => `Hello ${name}!`},
+const myMock = mock('myMock', {
+    sayHello: (name: string) => `Hello ${name}!`,
     name: 'Willy'
-);
+});
 when(myMock.sayHello()).callThrough();
 when(myMock.name).useActual();
 
