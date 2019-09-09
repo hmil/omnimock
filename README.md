@@ -4,6 +4,10 @@ OmniMock is a test mock library for TypeScript, with a focus on strong typing an
 
 Unlike other similar libraries, OmniMock was built from the ground up for TypeScript and makes no compromise.
 
+# Getting started
+
+Check out the [quick start guide](https://github.com/hmil/omnimock/wiki/Quick-start-guide) to get up to speed in minutes. Do come back here if you want to learn why this library was built the way it was built and why it is a good long-term investment for your projects.
+
 # Requirements
 
 OmniMock aims to bring the best possible mocking experience in TypeScript with no compromise. This comes at the cost of a few prerequisites:
@@ -99,35 +103,6 @@ You may argument that the above can easily be achieved by creating a manual mock
 2. ...The wrong thing being: your production code is not equipped to deal with undefined values from your `Partial`. If it turns out the code uses some of the properties you thought it did not use, then it is possible that the undefined value will trickle down your system and cause an Error far from the original place the culprit value came from.
 
 **By contrast, if you forget to mock something, or if you make some changes to the code of `battlefield`, then OmniMock might throw an error like this: `Error: Unexpected call to MtgCard.play()`, with a stacktrace pointing to the exact location where the unexpected call occurred.**
-
-## Quick peek
-
-This is what a test using OmniMock could look like:
-
-```ts
-import { instance, mock, verify, when } from 'omnimock';
-
-// Definitions
-interface CatType {
-    greet(name: string): string;
-}
-const myService = {
-    doSomethingWithACat(cat: CatType) {
-        return `cat says: ${cat.greet('John')}`;
-    }
-}
-
-// Setup
-const mockCat = mock<CatType>('mockCat');
-when(mockCat.greet('John')).return('Hello John').atLeastOnce();
-
-// Test execution
-const result = myService.doSomethingWithACat(instance(mockCat));
-
-// Verification
-verify(mockCat);
-expect(result).toEqual('cat says: Hello John');
-```
 
 # Features
 
