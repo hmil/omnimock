@@ -1,4 +1,4 @@
-import { instance, mock, when } from '../../src';
+import { instance, mock, when, mockInstance } from '../../src';
 
 describe('promise helpers', () => {
 
@@ -17,5 +17,12 @@ describe('promise helpers', () => {
         } catch (e) {
             expect(e).toBe('no');
         }
+    });
+
+    it('can resolve with a mock instance', async () => {
+        const myMock = mock<() => Promise<string>>('myMock');
+        const value = mockInstance<string>('value');
+        when(myMock()).resolve(value);
+        expect(await instance(myMock)()).toBe(value);
     });
 });
