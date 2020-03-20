@@ -11,11 +11,17 @@ import {
 } from '../plugin-api';
 
 interface Quantifiers<T extends UnknownRecording> {
+    /** Expect this behavior exactly n times  */
     times(n: number): ExpectationSetter<T>;
+    /** Expect this behavior 1 or more times */
     atLeastOnce(): ExpectationSetter<T>;
+    /** Expect this behavior 0 or one times */
     atMostOnce(): ExpectationSetter<T>;
+    /** Expect this behavior exactly one time */
     once(): ExpectationSetter<T>;
+    /** Expect this behavior 0 or more times */
     anyTimes(): ExpectationSetter<T>;
+    /** Expect this behavior exactly 0 times */
     never(): ExpectationSetter<T>;
 }
 
