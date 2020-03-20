@@ -9,7 +9,7 @@ import { getMetadata, METADATA_KEY, setMetadata } from './metadata';
 import { AnyRecording, Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
 
 const constructorCacheKey = Symbol('constructor');
-const FILTERED_PROPS = ['toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
+const FILTERED_PROPS = ['asymmetricMatch', 'then', 'toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
 
 function createProxyStub<T>(): T {
     return function virtualStub() {
@@ -358,15 +358,15 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                 }
             }
 
-            if (typeof p === 'string' && FILTERED_PROPS.indexOf(p) >= 0) {
-                return Reflect.get(target, p, receiver);
-            }
-
             if (params.getBacking) {
                 const backing = params.getBacking();
                 if (Reflect.has(backing, p)) {
                     return Reflect.get(backing, p, receiver);
                 }
+            }
+
+            if (typeof p === 'string' && FILTERED_PROPS.indexOf(p) >= 0) {
+                return Reflect.get(target, p, receiver);
             }
 
             return reportMemberAccessError(
