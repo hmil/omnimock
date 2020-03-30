@@ -376,35 +376,35 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                             getSignature(),
                             Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
                     },
-                    has(target: T, p: PropertyKey): boolean {
-                        return Reflect.has(target, p);
+                    has(callTarget: T, callP: PropertyKey): boolean {
+                        return Reflect.has(callTarget, callP);
                     },
-                    get(target: T, p: PropertyKey, receiver: any): any {
-                        if (p === 'apply') {
-                            return new Proxy<T>((() => void 0) as T, callOrApplyProxyHandler(
-                                (_target: T, thisArg: any, argArray: [unknown, unknown[]]) => cb(target, argArray[0], argArray[1])));
+                    get(callTarget: T, callP: PropertyKey, _receiver: any): any {
+                        if (callP === 'apply') {
+                            return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                                (_target: T, _thisArg: any, argArray: [unknown, unknown[]]) => cb(callTarget, argArray[0], argArray[1])));
                         }
-                        if (p === 'call') {
-                            return new Proxy<T>((() => void 0) as T, callOrApplyProxyHandler(
-                                (_target: T, thisArg: any, [ctx, ...args]: unknown[]) => cb(target, ctx, args)));
+                        if (callP === 'call') {
+                            return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                                (_target: T, _thisArg: any, [ctx, ...args]: unknown[]) => cb(callTarget, ctx, args)));
                         }
 
                         return reportMemberAccessError(
                                 getSignature() + formatPropertyAccess(p),
                                 Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
                     },
-                    set(_target: T, p: PropertyKey, value: any, receiver: any): boolean {
+                    set(_target: T, callP: PropertyKey, value: any, _receiver: any): boolean {
                         throw new Error(
-                                `Unexpected write: ${getSignature()}${formatPropertyAccess(p)} = ${value}\n` +
+                                `Unexpected write: ${getSignature()}${formatPropertyAccess(callP)} = ${value}\n` +
                                 `Use a backed mock if you want to test property mutations.`);
                     },
-                    deleteProperty(_target: T, p: PropertyKey): boolean {
+                    deleteProperty(_target: T, callP: PropertyKey): boolean {
                         throw new Error(
-                                `Unexpected: delete ${params.expectedCalls.path}${formatPropertyAccess(p)}\n` +
+                                `Unexpected: delete ${params.expectedCalls.path}${formatPropertyAccess(callP)}\n` +
                                 `Use a backed mock if you want to test property mutations.`);
                     },
                     apply: cb,
-                    construct(_target: T, argArray?: any, newTarget?: any): any {
+                    construct(_target: T, _argArray?: any, _newTarget?: any): any {
                         reportMemberAccessError(
                             getSignature(),
                             Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
@@ -413,13 +413,14 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
             }
 
             if (p === 'apply') {
-                return new Proxy<T>((() => void 0) as T, callOrApplyProxyHandler(
-                    (_target: T, thisArg: any, argArray: [unknown, unknown[]]) => instanceProxyHandler(params).apply!(target, argArray[0], argArray[1])));
+                return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                    (_target: T, _thisArg: any, argArray: [unknown, unknown[]]) =>
+                            instanceProxyHandler(params).apply!(target, argArray[0], argArray[1])));
             }
 
             if (p === 'call') {
-                return new Proxy<T>((() => void 0) as T, callOrApplyProxyHandler(
-                    (_target: T, thisArg: any, [ctx, ...args]: unknown[]) => instanceProxyHandler(params).apply!(target, ctx, args)));
+                return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                    (_target: T, _thisArg: any, [ctx, ...args]: unknown[]) => instanceProxyHandler(params).apply!(target, ctx, args)));
             }
 
             return reportMemberAccessError(

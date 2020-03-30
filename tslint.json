@@ -11,6 +11,7 @@
         "interface-name": false,
         "quotemark": [ true, "single" ],
         "member-access": [ true, "no-public", "check-constructor" ],
+        "max-line-length": [ true, 140 ],
         "max-classes-per-file": false,
         "arrow-parens": [ true, "ban-single-arg-parens" ],
         "variable-name": [ true, "allow-leading-underscore" ],
