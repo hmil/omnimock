@@ -5,7 +5,7 @@ import { BehaviorMatchResult } from './MockExpectations';
 export function reportFunctionCallError(
         callSignature: string,
         match: BehaviorMatchResult<any, any>,
-        hasBackingObject: 'yes' | 'no' | 'does not matter') {
+        hasBackingObject: 'yes' | 'no' | 'does not matter'): never {
     const backingInstanceInfo = hasBackingObject ?
             'The backing object is not a function' :
             'This mock is not backed';
@@ -53,7 +53,7 @@ export function reportMemberAccessError(
         signature: string,
         membersWithBehavior: PropertyKey[],
         match: BehaviorMatchResult<any, any> | undefined,
-        getBacking: (() => any) | undefined) {
+        getBacking: (() => any) | undefined): never {
 
 
     let messageBuilder = `Unexpected property access: ${signature}\n`;

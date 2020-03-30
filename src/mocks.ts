@@ -369,6 +369,60 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                 return Reflect.get(target, p, receiver);
             }
 
+            function callOrApplyProxyHandler(cb: (_target: T, thisArg: any, argArray: any) => any): ProxyHandler<T> {
+                return {
+                    getPrototypeOf(_target: T): object | null {
+                        return reportMemberAccessError(
+                            getSignature(),
+                            Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
+                    },
+                    has(callTarget: T, callP: PropertyKey): boolean {
+                        return Reflect.has(callTarget, callP);
+                    },
+                    get(callTarget: T, callP: PropertyKey, _receiver: any): any {
+                        if (callP === 'apply') {
+                            return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                                (_target: T, _thisArg: any, argArray: [unknown, unknown[]]) => cb(callTarget, argArray[0], argArray[1])));
+                        }
+                        if (callP === 'call') {
+                            return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                                (_target: T, _thisArg: any, [ctx, ...args]: unknown[]) => cb(callTarget, ctx, args)));
+                        }
+
+                        return reportMemberAccessError(
+                                getSignature() + formatPropertyAccess(p),
+                                Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
+                    },
+                    set(_target: T, callP: PropertyKey, value: any, _receiver: any): boolean {
+                        throw new Error(
+                                `Unexpected write: ${getSignature()}${formatPropertyAccess(callP)} = ${value}\n` +
+                                `Use a backed mock if you want to test property mutations.`);
+                    },
+                    deleteProperty(_target: T, callP: PropertyKey): boolean {
+                        throw new Error(
+                                `Unexpected: delete ${params.expectedCalls.path}${formatPropertyAccess(callP)}\n` +
+                                `Use a backed mock if you want to test property mutations.`);
+                    },
+                    apply: cb,
+                    construct(_target: T, _argArray?: any, _newTarget?: any): any {
+                        reportMemberAccessError(
+                            getSignature(),
+                            Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
+                    }
+                };
+            }
+
+            if (p === 'apply') {
+                return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                    (_target: T, _thisArg: any, argArray: [unknown, unknown[]]) =>
+                            instanceProxyHandler(params).apply!(target, argArray[0], argArray[1])));
+            }
+
+            if (p === 'call') {
+                return new Proxy<T>(createProxyStub(), callOrApplyProxyHandler(
+                    (_target: T, _thisArg: any, [ctx, ...args]: unknown[]) => instanceProxyHandler(params).apply!(target, ctx, args)));
+            }
+
             return reportMemberAccessError(
                     getSignature(), Array.from(params.expectedMemberAccess.keys()), undefined, params.getBacking);
         },
