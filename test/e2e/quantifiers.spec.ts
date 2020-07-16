@@ -137,7 +137,7 @@ describe('Expectation quantifiers', () => {
             when(chipMock.id).useValue(112).atLeastOnce();
 
             when(catMock.color).useValue('green').atLeastOnce();
-            when(catMock.getTag(12).chip).useValue(instance(chipMock));
+            when(catMock.getTag(12).chip).useValue(instance(chipMock)).anyTimes();
             when(catMock.getTag(22).chip).useValue(instance(chipMock)).atLeastOnce();
 
             try {

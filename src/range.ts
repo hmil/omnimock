@@ -46,9 +46,10 @@ export class Range {
             if (this.minimum === 0) {
                 return `any times`;
             }
-            return `at least ${this.minimum}`;
+            const qty = this.minimum === 1 ? 'once' : `${this.minimum} times`;
+            return `at least ${qty}`;
         } else {
-            return `between ${this.minimum} and ${this.maximum}`;
+            return `between ${this.minimum} and ${this.maximum} times`;
         }
     }
 

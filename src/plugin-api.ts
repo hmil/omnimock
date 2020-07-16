@@ -18,6 +18,7 @@
 import { ExpectationHandler } from './behavior/Behavior';
 import { MockBehaviors } from './behavior/MockExpectations';
 import { GetMetadata, getMetadata } from './metadata';
+import { AT_LEAST_ONCE } from './range';
 import { AnyRecording, RecordedArguments, RecordedType, RECORDING_METADATA_KEY, UnknownRecording } from './recording';
 
 export { OmniMockError } from './error';
@@ -59,6 +60,7 @@ class ExpectationSetterApi<T extends AnyRecording> {
     answer(cb: ExpectationHandler<RecordedArguments<T>, RecordedType<T>>): void {
         this.recording.expect();
         this.recording.expectations.addExpectation(this.recording.args, cb);
+        this.recording.expectations.setLastExpectationRange(AT_LEAST_ONCE);
     }
 
     get expectations(): MockBehaviors<RecordedArguments<T>, RecordedType<T>> {

@@ -10,14 +10,14 @@ describe('the debug utility', () => {
         when(m.getTag(1).manufacturer.fetch()).resolve('a');
         when(m.getTag(1).chip.id).useValue(42);
 
-        expect(debug(m)).toEqual(`<CatClass>.name : expected any times, received 0
+        expect(debug(m)).toEqual(`<CatClass>.name : expected at least once, received 0
 <CatClass>.getTag : expected any times, received 0
-<CatClass>.getTag(12) : expected any times, received 0
+<CatClass>.getTag(12) : expected at least once, received 0
 <CatClass>.getTag(1) : expected any times, received 0
 <CatClass>.getTag(1).manufacturer : expected any times, received 0
 <CatClass>.getTag(1).chip : expected any times, received 0
 <CatClass>.getTag(1).manufacturer.fetch : expected any times, received 0
-<CatClass>.getTag(1).manufacturer.fetch() : expected any times, received 0
-<CatClass>.getTag(1).chip.id : expected any times, received 0`);
+<CatClass>.getTag(1).manufacturer.fetch() : expected at least once, received 0
+<CatClass>.getTag(1).chip.id : expected at least once, received 0`);
     });
 });

@@ -2,43 +2,43 @@ import { anyOf, contains, instance, mock, objectEq, when } from '../../src';
 import { CatClass, CatsSecretPlan, Tag } from '../fixtures/classes';
 
 describe('error messages', () => {
-    
+
     describe('the base symbol', () => {
-            it('uses the custom name of a virtual mock', () => {
-                const catMock = mock<CatClass>('virtual cat');
-                expect(() => instance(catMock).purr()).toThrow(/<virtual cat>.purr/);
-            });
+        it('uses the custom name of a virtual mock', () => {
+            const catMock = mock<CatClass>('virtual cat');
+            expect(() => instance(catMock).purr()).toThrow(/<virtual cat>.purr/);
+        });
 
-            it('uses the class name of a class-based backed mock', () => {
-                const catMock = mock('catMock', new CatClass('Olinka'));
-                when(catMock.purr()).return(undefined).never();
-                expect(() => instance(catMock).purr()).toThrow(/<catMock>.purr/);
-            });
+        it('uses the class name of a class-based backed mock', () => {
+            const catMock = mock('catMock', new CatClass('Olinka'));
+            when(catMock.purr()).return(undefined).never();
+            expect(() => instance(catMock).purr()).toThrow(/<catMock>.purr/);
+        });
 
-            it('uses "anonymous class" for anonymous classes', () => {
-                const catMock = mock(class { purr() { return 'a'; }});
-                expect(() => instance(catMock).purr()).toThrow(/<anonymous class>.purr/);
-            });
+        it('uses "anonymous class" for anonymous classes', () => {
+            const catMock = mock(class { purr() { return 'a'; }});
+            expect(() => instance(catMock).purr()).toThrow(/<anonymous class>.purr/);
+        });
 
-            it('uses "Object" for inline complete mocks', () => {
-                const catMock = mock('catMock', {
-                    purr: () => undefined
-                });
-                when(catMock.purr()).return(undefined).never();
-                expect(() => instance(catMock).purr()).toThrow(/<catMock>.purr/);
+        it('uses "Object" for inline complete mocks', () => {
+            const catMock = mock('catMock', {
+                purr: () => undefined
             });
+            when(catMock.purr()).return(undefined).never();
+            expect(() => instance(catMock).purr()).toThrow(/<catMock>.purr/);
+        });
 
-            it('uses the custom name of a partial-backed mock', () => {
-                const catMock = mock<CatClass>('virtual cat', {
-                    color: 'grey'
-                });
-                expect(() => instance(catMock).purr()).toThrow(/<virtual cat>.purr/);
+        it('uses the custom name of a partial-backed mock', () => {
+            const catMock = mock<CatClass>('virtual cat', {
+                color: 'grey'
             });
-    
-            it('uses the original name of a class', () => {
-                const catMock = mock(CatClass);
-                expect(() => instance(catMock).purr()).toThrow(/<CatClass>.purr/);
-            });
+            expect(() => instance(catMock).purr()).toThrow(/<virtual cat>.purr/);
+        });
+
+        it('uses the original name of a class', () => {
+            const catMock = mock(CatClass);
+            expect(() => instance(catMock).purr()).toThrow(/<CatClass>.purr/);
+        });
     });
 
     describe('unexpected calls', () => {
@@ -89,10 +89,10 @@ describe('error messages', () => {
                 siblings: []
             };
 
-            when(catMock.setTag(objectEq<Tag>(tag))).return(undefined).once();
+            when(catMock.setTag(objectEq<Tag>(tag))).return().once();
             when(catMock.setTag(contains<Tag>({
                 chip: tag.chip
-            }))).return(undefined).once();
+            }))).return().once();
             when(catMock.greet('john')).return('Hey you').atLeastOnce();
 
             tag.chip = {
