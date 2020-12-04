@@ -91,7 +91,7 @@ when(gameState.player1.getManaPool())
     .return([ { color: 'W', qty: 1 } ])
     .once();
 
-const result = battlefield.castSpell(gameState, fakeCard);
+const result = battlefield.castSpell(instance(gameState), instance(fakeCard));
 
 expect(result.type).toBe('illegal move');
 expect(result.reason).toBe('not enough mana');
