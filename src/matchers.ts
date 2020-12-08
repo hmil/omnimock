@@ -263,6 +263,23 @@ const anyArrayMatcher = new class AnyArrayMatcher implements MatcherMetadata<Any
     }
 }();
 
+/**
+ * Matches a parameter which was not passed.
+ */
+export function absent(): Matcher<any> {
+    return createMatcher(absentMatcher);
+}
+const absentMatcher = new class AbsentMatcher implements MatcherMetadata<AbsentMatcher> {
+    /** @override */ get name() {
+        return fmt`any array`;
+    }
+    /** @override */ equals(other: AbsentMatcher): boolean {
+        return this === other;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return actual === undefined || `expected missing matcher but got ${typeof actual}`;
+    }
+}();
 
 // ===================================
 // Combinatorial matchers

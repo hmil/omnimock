@@ -1,4 +1,4 @@
-import { mockInstance } from "../../src";
+import { mockInstance } from '../../src';
 
 describe('Compatibility hacks', () => {
 

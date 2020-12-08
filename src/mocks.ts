@@ -156,6 +156,10 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
                     childrenDebug;
         },
         verify: () => {
+            // Turns off warning about no expectations in test suite when verify is used
+            if (typeof expect !== undefined && params.expectations.hasExpecting()) {
+                expect(0).toBe(0);
+            }
             return params.expectations.getAllUnsatisfied()
                     .map(expectation => expectation.toString())
                     .concat(...mockCache.getAll()

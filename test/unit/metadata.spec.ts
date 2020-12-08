@@ -1,4 +1,4 @@
-import { setMetadata, WithMetadata, getMetadata, METADATA_KEY, hasMetadata } from "../../src/metadata";
+import { getMetadata, hasMetadata, METADATA_KEY, setMetadata, WithMetadata } from '../../src/metadata';
 
 interface MetadataType {
     foo: string;

@@ -42,6 +42,7 @@ export class Behavior<Args extends unknown[] | undefined, Ret> {
             private readonly handler: ExpectationHandler<Args, Ret>) { }
 
     match(context: RuntimeContext<Args, Ret>): true | string {
+        // TODO: Handle missing arguments
         return match(this.args, context.args);
     }
 
@@ -72,5 +73,12 @@ export class Behavior<Args extends unknown[] | undefined, Ret> {
 
     isSatisfied(): boolean {
         return this.expectedCalls.contains(this.actualCalls.length);
+    }
+
+    /**
+     * Returns true when this behavior also acts as an expectation (ie. the minimum number of calls is > 0)
+     */
+    isExpecting(): boolean {
+        return this.expectedCalls.hasFixedCount() || this.expectedCalls.getMinimum() > 0;
     }
 }
