@@ -30,6 +30,7 @@ import {
     verify,
     weakEquals,
     when,
+    functionArguments,
 } from '../../src';
 import { setCustomFail } from '../../src/behavior/reporters';
 import { MatcherMetadata } from '../../src/matcher';
@@ -75,12 +76,24 @@ describe('argument matchers', () => {
         });
     });
 
-    describe('absent', () => {
+    describe('arguments', () => {
         it('matches absent parameters', () => {
             const myMock = mock<(arg?: string | number) => boolean>('myMock');
             when(myMock(absent())).return(true);
             expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
             expect(instance(myMock)()).toBe(true);
+        });
+        it('fails on too many parameters', () => {
+            const myMock = mock<(arg?: string | number) => boolean>('myMock');
+            when(myMock()).return(true);
+            expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
+        });
+        it('fails when not an array', () => {
+            expect(match(functionArguments([1]), 0)).not.toBe(true);
+        });
+        it('succeeds when equivalent', () => {
+            expect(match(functionArguments([1]), functionArguments([1]))).toBe(true);
         });
     });
 

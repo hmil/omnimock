@@ -2,9 +2,9 @@ language: node_js
 node_js:
 - lts/*
 script:
-- npm run lint
-- npm run test
-- npm run build
+- yarn lint
+- yarn test
+- yarn build
 deploy:
   provider: npm
   email: hadrien.milano@gmail.com

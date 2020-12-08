@@ -236,4 +236,25 @@ The following behaviors were tested but they did not match:
 The backing object is not a function`);
         });
     });
+
+    describe('fail override', () => {
+        it('uses the built-in fail function by default', () => {
+            setCustomFail(undefined);
+            let failed = false;
+            spyOn(globalThis, 'fail').and.callFake(() => { failed = true });
+
+            const theMock = mock<() => void>('mock');
+            expect(() => instance(theMock)()).toThrowError(/Unexpected/);
+            expect(failed).toBe(true);
+        });
+
+        it('uses a custom function', () => {
+            let failed = false;
+            setCustomFail((message) => { failed = true; throw new Error(message); });
+
+            const theMock = mock<() => void>('mock');
+            expect(() => instance(theMock)()).toThrowError(/Unexpected/);
+            expect(failed).toBe(true);
+        });
+    });
 });
