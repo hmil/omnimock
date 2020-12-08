@@ -1,4 +1,5 @@
 import { greaterThan, instance, mock, verify, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('manual chaining', () => {
@@ -52,6 +53,7 @@ describe('automatic chaining', () => {
     });
 
     it('catches unexpected accesses', () => {
+        setCustomFail(null);
         const catMock = mock(CatClass);
 
         // Actually assert the chip path

@@ -1,7 +1,12 @@
 import { instance, mock, reset, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('reset()', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     it('resets an entire mock', () => {
         const catMock = mock(CatClass);

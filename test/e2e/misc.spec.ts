@@ -1,4 +1,5 @@
-import { instance, mock, mockInstance, when } from '../../src';
+import { instance, mock, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('JSON stringification', () => {
@@ -17,6 +18,7 @@ describe('JSON stringification', () => {
         expect(() => JSON.stringify(instance(catMock))).not.toThrow();
     });
     it('can override expectations on toJSON', () => {
+        setCustomFail(null);
         const catMock = mock<CatClass>('catMock');
         when((catMock as any).toJSON).return(undefined).never();
         expect(() => JSON.stringify(instance(catMock))).toThrow();

@@ -1,4 +1,5 @@
 import { instance, mock, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { METADATA_KEY } from '../../src/metadata';
 import { CatClass } from '../fixtures/classes';
 
@@ -24,6 +25,7 @@ describe('the mock object', () => {
     });
 
     it('makes no sense to mock the base object', () => {
+        setCustomFail(null);
         const m = mock<CatClass>('m');
         when(m).useValue(new CatClass('Olinka'));
         expect(() => instance(m).name).toThrow(/Unexpected property access/);

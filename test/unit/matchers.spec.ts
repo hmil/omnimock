@@ -31,10 +31,15 @@ import {
     weakEquals,
     when,
 } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { MatcherMetadata } from '../../src/matcher';
 import { CatClass, Container } from '../fixtures/classes';
 
 describe('argument matchers', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     describe('same', () => {
         it('matches only the exact same instance', () => {

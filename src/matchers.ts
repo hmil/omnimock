@@ -268,7 +268,7 @@ const anyArrayMatcher = new class AnyArrayMatcher implements MatcherMetadata<Any
  * 
  * See also `functionArguments`
  */
-export function absent(): Matcher<any> {
+export function absent(): Matcher<undefined> {
     return createMatcher(absentMatcher);
 }
 const absentMatcher = new class AbsentMatcher implements MatcherMetadata<AbsentMatcher> {

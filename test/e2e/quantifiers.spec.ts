@@ -1,7 +1,12 @@
 import { instance, mock, verify, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('Expectation quantifiers', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     it('needs a behavior defined first', () => {
         const catMock = mock(CatClass);

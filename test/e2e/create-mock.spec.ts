@@ -1,4 +1,5 @@
 import { anyString, instance, Mock, mock, mockInstance, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('ways to create a mock', () => {
@@ -66,6 +67,10 @@ describe('ways to obtain a mock instance from a mock', () => {
 
 
 describe('ways to create a mock instance', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     it('create an anonymous virtual mock with a name', () => {
         const m = mockInstance<CatClass>('CatClass');

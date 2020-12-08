@@ -1,4 +1,5 @@
 import { anyString, instance, mock, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('partial mocks', () => {
@@ -15,6 +16,7 @@ describe('partial mocks', () => {
     });
 
     it('throws on unexpected access to unknown value', () => {
+        setCustomFail(null);
         const catMock = mock<CatClass>('catMock', {
             color: undefined,
             name: 'Olinka',

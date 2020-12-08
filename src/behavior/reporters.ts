@@ -46,7 +46,7 @@ export function reportFunctionCallError(
 
     messageBuilder += '\n\n' + backingInstanceInfo;
 
-    throw new Error(messageBuilder);
+    doFail(messageBuilder);
 }
 
 export function reportMemberAccessError(
@@ -77,6 +77,23 @@ export function reportMemberAccessError(
     } else {
         messageBuilder += 'This mock is not backed';
     }
-    
-    throw new Error(messageBuilder);
+
+    doFail(messageBuilder);
 }
+
+let customFail: ((message: string) => never) | undefined;
+function doFail(message: string): never {
+    // The double if is written like this such that doing `setCustomFail(null)` disables the fail function
+    if (customFail !== undefined) {
+        if (typeof customFail === 'function') {
+            customFail(message);
+        }
+    } else if (typeof fail === 'function') {
+        fail(message);
+    }
+    throw new Error(message);
+}
+export function setCustomFail(fail: ((message: string) => never) | undefined) {
+    customFail = fail;
+}
+

@@ -1,7 +1,12 @@
 import { anyOf, contains, instance, mock, objectEq, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass, CatsSecretPlan, Tag } from '../fixtures/classes';
 
 describe('error messages', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     describe('the base symbol', () => {
         it('uses the custom name of a virtual mock', () => {
