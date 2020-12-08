@@ -1,4 +1,5 @@
 import {
+    absent,
     allOf,
     anyArray,
     anyBoolean,
@@ -69,6 +70,15 @@ describe('argument matchers', () => {
         });
     });
 
+    describe('absent', () => {
+        it('matches absent parameters', () => {
+            const myMock = mock<(arg?: string | number) => boolean>('myMock');
+            when(myMock(absent())).return(true);
+            expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
+        });
+    });
+
     describe('anything', () => {
         it('matches anything', () => {
             const myMock = mock<(arg: any) => boolean>('myMock');
@@ -79,11 +89,11 @@ describe('argument matchers', () => {
             expect(instance(myMock)(0)).toBe(true);
             expect(instance(myMock)({a: 2})).toBe(true);
         });
-        it('Does not match missing arguments', () => {
+        it('Matches missing arguments', () => {
             const myMock = mock<(arg?: any) => boolean>('myMock');
             when(myMock(anything())).return(true);
 
-            expect(() => instance(myMock)()).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
         });
         it('matches itself', () => {
             expect(match(anything(), anything())).toBe(true);

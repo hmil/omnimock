@@ -1,5 +1,5 @@
 import { formatSignature } from '../formatting';
-import { match } from '../matchers';
+import { functionArguments, match } from '../matchers';
 import { Range } from '../range';
 
 export interface RuntimeContext<Args, Ret> {
@@ -42,8 +42,8 @@ export class Behavior<Args extends unknown[] | undefined, Ret> {
             private readonly handler: ExpectationHandler<Args, Ret>) { }
 
     match(context: RuntimeContext<Args, Ret>): true | string {
-        // TODO: Handle missing arguments
-        return match(this.args, context.args);
+        const matcher = this.args == null ? this.args : functionArguments(this.args as any[]);
+        return match(matcher, context.args);
     }
 
     handle(context: RuntimeContext<Args, Ret>): HandlingResult<Ret> {

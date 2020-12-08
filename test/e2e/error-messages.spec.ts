@@ -104,12 +104,12 @@ describe('error messages', () => {
 The following behaviors were tested but they did not match:
 
 - <CatClass>.setTag(<objectEq(Object(chip, manufacturer, siblings))>) : expected once, received 0
-  reason: element $0 doesn't match: object doesn't match:
+  reason: argument $0 doesn't match: object doesn't match:
     - [chip]: object doesn't match:
       - [id]: expected 1 but got 23
 
 - <CatClass>.setTag(<objectContaining(Object(chip))>) : expected once, received 0
-  reason: element $0 doesn't match: object doesn't match:
+  reason: argument $0 doesn't match: object doesn't match:
     - [chip]: object doesn't match:
       - [id]: expected 1 but got 23
 
@@ -148,7 +148,7 @@ Previous matching calls were:
 The following behaviors were tested but they did not match:
 
 - <CatClass>.greet("jean") : expected once, received 0
-  reason: element $0 doesn't match: expected "jean" but got "oliver"
+  reason: argument $0 doesn't match: expected "jean" but got "oliver"
 
 These behaviors were not tested because the matching call was defined first and therefore had precendence.
 - <CatClass>.greet("john")
@@ -201,7 +201,7 @@ Previous matching calls were:
 The following behaviors were tested but they did not match:
 
 - new <ctrMock>.ctr("jean") : expected once, received 0
-  reason: element $0 doesn't match: expected "jean" but got "oliver"
+  reason: argument $0 doesn't match: expected "jean" but got "oliver"
 
 These behaviors were not tested because the matching call was defined first and therefore had precendence.
 - new <ctrMock>.ctr("john")
@@ -222,10 +222,10 @@ The backing object is not a function`);
 The following behaviors were tested but they did not match:
 
 - new (<ctrMock>.getCtr())("jean") : expected once, received 0
-  reason: element $0 doesn't match: expected "jean" but got "oliver"
+  reason: argument $0 doesn't match: expected "jean" but got "oliver"
 
 - new (<ctrMock>.getCtr())("john") : expected once, received 0
-  reason: element $0 doesn't match: expected "john" but got "oliver"
+  reason: argument $0 doesn't match: expected "john" but got "oliver"
 
 
 The backing object is not a function`);
