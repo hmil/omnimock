@@ -9,11 +9,11 @@ import { getMetadata, METADATA_KEY, setMetadata } from './metadata';
 import { AnyRecording, Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
 
 const constructorCacheKey = Symbol('constructor');
-const FILTERED_PROPS = ['asymmetricMatch', 'then', 'toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
+const FILTERED_PROPS = ['asymmetricMatch', 'jasmineToString', 'then', 'toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
 
 function createProxyStub<T>(): T {
     return function virtualStub() {
-        throw new Error('Error: attempted to invoke a stub! This should not happen.' +
+        throw new Error('Error: attempted to invoke a stub! This should not happen. ' +
         'Please report a bug at https://github.com/hmil/omnimock');
     } as any;
 }
@@ -156,6 +156,10 @@ function mockProxyHandler<T extends object>(params: MockParameters<T>): ProxyHan
                     childrenDebug;
         },
         verify: () => {
+            // Turns off warning about no expectations in test suite when verify is used
+            if (typeof expect !== undefined && params.expectations.hasExpecting()) {
+                expect(0).toBe(0);
+            }
             return params.expectations.getAllUnsatisfied()
                     .map(expectation => expectation.toString())
                     .concat(...mockCache.getAll()

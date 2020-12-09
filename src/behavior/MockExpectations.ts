@@ -69,6 +69,10 @@ export class MockBehaviors<Args extends unknown[] | undefined, Ret> {
         return this.expectations.filter(e => !e.isSatisfied());
     }
 
+    hasExpecting(): boolean {
+        return this.expectations.some(e => e.isExpecting());
+    }
+
     reset(): void {
         this.expectations.length = 0;
     }

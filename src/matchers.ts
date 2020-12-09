@@ -263,6 +263,62 @@ const anyArrayMatcher = new class AnyArrayMatcher implements MatcherMetadata<Any
     }
 }();
 
+/**
+ * Matches a parameter which was not passed.
+ * 
+ * See also `functionArguments`
+ */
+export function absent(): Matcher<undefined> {
+    return createMatcher(absentMatcher);
+}
+const absentMatcher = new class AbsentMatcher implements MatcherMetadata<AbsentMatcher> {
+    /** @override */ get name() {
+        return fmt`absent`;
+    }
+    /** @override */ equals(other: AbsentMatcher): boolean {
+        return this === other;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        return actual === undefined || `unexpected argument ${typeof actual}`;
+    }
+}();
+
+/**
+ * Matches a set of arguments.
+ *
+ * Similar to arrayEq but it works with `absent()` to match omitted arguments
+ */
+export function functionArguments(expected: any[]): Matcher<any[]> {
+    return createMatcher(new ArgumentsMatcher(expected));
+}
+class ArgumentsMatcher implements MatcherMetadata<ArgumentsMatcher> {
+    constructor(private expected: any[]) { }
+
+    /** @override */ get name() {
+        return fmt`args(${this.expected})`;
+    }
+    /** @override */ equals(other: ArgumentsMatcher): boolean {
+        return match(this.expected, other.expected) === true;
+    }
+    /** @override */ match(actual: unknown): string | true {
+        if (!(actual instanceof Array)) {
+            return fmt`expected argument array but got ${actual}`;
+        }
+
+        if (this.expected.length < actual.length) {
+            return `too many arguments provided: expected ${this.expected.length} but got ${actual.length}`;
+        }
+
+        for (let i = 0 ; i < this.expected.length ; i++) {
+            const matched = match(this.expected[i], actual[i]);
+            if (matched !== true) {
+                return `argument $${i} doesn't match: ${indent(matched)}`;
+            }
+        }
+
+        return true;
+    }
+}
 
 // ===================================
 // Combinatorial matchers

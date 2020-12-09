@@ -1,4 +1,5 @@
-import { instance, mock, when } from '../../src';
+import { instance, mock } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 /**
@@ -6,6 +7,10 @@ import { CatClass } from '../fixtures/classes';
  */
 
 describe('setter behavior', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     it('changes the value of the backing instance', () => {
         const catMock = mock<CatClass>('catMock', {});

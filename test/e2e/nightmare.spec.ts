@@ -1,8 +1,11 @@
 import { anyString, between, greaterThan, instance, mock, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 
 describe('The nightmare test suite', () => {
 
     it('is a hodgepodge of contrived usages', () => {
+        setCustomFail(null);
+
         /**
          * This interface is a nightmare to mock... or is it?
          */

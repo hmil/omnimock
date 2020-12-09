@@ -1,4 +1,5 @@
 import { anyString, instance, mock, when } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { CatClass } from '../fixtures/classes';
 
 describe('A mock based on a class', () => {
@@ -58,6 +59,7 @@ describe('A mock based on a class', () => {
         });
     
         it('prevents unmocked property access', () => {
+            setCustomFail(null);
             const catMock = mock(CatClass);
             const cat = instance(catMock);
     

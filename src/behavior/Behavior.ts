@@ -1,5 +1,5 @@
 import { formatSignature } from '../formatting';
-import { match } from '../matchers';
+import { functionArguments, match } from '../matchers';
 import { Range } from '../range';
 
 export interface RuntimeContext<Args, Ret> {
@@ -42,7 +42,8 @@ export class Behavior<Args extends unknown[] | undefined, Ret> {
             private readonly handler: ExpectationHandler<Args, Ret>) { }
 
     match(context: RuntimeContext<Args, Ret>): true | string {
-        return match(this.args, context.args);
+        const matcher = this.args == null ? this.args : functionArguments(this.args as any[]);
+        return match(matcher, context.args);
     }
 
     handle(context: RuntimeContext<Args, Ret>): HandlingResult<Ret> {
@@ -72,5 +73,12 @@ export class Behavior<Args extends unknown[] | undefined, Ret> {
 
     isSatisfied(): boolean {
         return this.expectedCalls.contains(this.actualCalls.length);
+    }
+
+    /**
+     * Returns true when this behavior also acts as an expectation (ie. the minimum number of calls is > 0)
+     */
+    isExpecting(): boolean {
+        return this.expectedCalls.hasFixedCount() || this.expectedCalls.getMinimum() > 0;
     }
 }

@@ -1,4 +1,5 @@
 import {
+    absent,
     allOf,
     anyArray,
     anyBoolean,
@@ -29,11 +30,17 @@ import {
     verify,
     weakEquals,
     when,
+    functionArguments,
 } from '../../src';
+import { setCustomFail } from '../../src/behavior/reporters';
 import { MatcherMetadata } from '../../src/matcher';
 import { CatClass, Container } from '../fixtures/classes';
 
 describe('argument matchers', () => {
+
+    beforeEach(() => {
+        setCustomFail(null);
+    });
 
     describe('same', () => {
         it('matches only the exact same instance', () => {
@@ -69,6 +76,27 @@ describe('argument matchers', () => {
         });
     });
 
+    describe('arguments', () => {
+        it('matches absent parameters', () => {
+            const myMock = mock<(arg?: string | number) => boolean>('myMock');
+            when(myMock(absent())).return(true);
+            expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
+        });
+        it('fails on too many parameters', () => {
+            const myMock = mock<(arg?: string | number) => boolean>('myMock');
+            when(myMock()).return(true);
+            expect(() => instance(myMock)(' ')).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
+        });
+        it('fails when not an array', () => {
+            expect(match(functionArguments([1]), 0)).not.toBe(true);
+        });
+        it('succeeds when equivalent', () => {
+            expect(match(functionArguments([1]), functionArguments([1]))).toBe(true);
+        });
+    });
+
     describe('anything', () => {
         it('matches anything', () => {
             const myMock = mock<(arg: any) => boolean>('myMock');
@@ -79,11 +107,11 @@ describe('argument matchers', () => {
             expect(instance(myMock)(0)).toBe(true);
             expect(instance(myMock)({a: 2})).toBe(true);
         });
-        it('Does not match missing arguments', () => {
+        it('Matches missing arguments', () => {
             const myMock = mock<(arg?: any) => boolean>('myMock');
             when(myMock(anything())).return(true);
 
-            expect(() => instance(myMock)()).toThrow(/Unexpected/);
+            expect(instance(myMock)()).toBe(true);
         });
         it('matches itself', () => {
             expect(match(anything(), anything())).toBe(true);

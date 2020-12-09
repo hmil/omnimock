@@ -1,4 +1,4 @@
-import { mock, instance, when, greaterThan } from '../../src';
+import { greaterThan, instance, mock, when } from '../../src';
 import { fmt } from '../../src/formatting';
 import { CatClass } from '../fixtures/classes';
 
