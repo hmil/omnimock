@@ -9,7 +9,11 @@ import { getMetadata, METADATA_KEY, setMetadata } from './metadata';
 import { AnyRecording, Recording, RECORDING_METADATA_KEY, RecordingMetadata, RecordingType } from './recording';
 
 const constructorCacheKey = Symbol('constructor');
-const FILTERED_PROPS = ['asymmetricMatch', 'jasmineToString', 'then', 'toJSON', ...Object.getOwnPropertyNames(Object.prototype)];
+const FILTERED_PROPS = [
+    Symbol.toPrimitive, Symbol.toStringTag,
+    'asymmetricMatch', 'jasmineToString', 'then', 'toJSON',
+    ...Object.getOwnPropertyNames(Object.prototype),
+];
 
 function createProxyStub<T>(): T {
     return function virtualStub() {
@@ -369,7 +373,7 @@ function instanceProxyHandler<T extends object>(params: InstanceParameters<T>): 
                 }
             }
 
-            if (typeof p === 'string' && FILTERED_PROPS.indexOf(p) >= 0) {
+            if ((typeof p === 'string' || typeof p === 'symbol') && FILTERED_PROPS.indexOf(p) >= 0) {
                 return Reflect.get(target, p, receiver);
             }
 
